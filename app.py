@@ -511,6 +511,8 @@ def download(job_id):
 @app.route("/system-info")
 def system_info():
     app.logger.info("System info requested")
+    if not app.debug:
+        return "Not Found", 404
     
     info = {
         "calibre_version": "Unknown",
