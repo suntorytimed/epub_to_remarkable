@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, Response
+from flask import Flask, jsonify, render_template, request, send_file, Response
 import subprocess
 import tempfile
 import os
@@ -480,6 +480,197 @@ def system_info():
         info=info,
         ibm_plex_installed=any("IBMPlex" in font for font in info["fonts"])
     )
+
+@app.route("/api/v1/health", methods=["GET"])
+def api_health():
+    app.logger.info("API health check requested")
+    
+    try:
+        calibre_version = subprocess.check_output(
+            ["ebook-convert", "--version"], 
+            text=True, 
+            stderr=subprocess.STDOUT
+        ).strip()
+        calibre_status = "available"
+    except Exception as e:
+        app.logger.error(f"Calibre not available: {str(e)}")
+        calibre_version = "Not available"
+        calibre_status = "unavailable"
+    
+    return jsonify({
+        "status": "operational",
+        "api_version": "1.0.0",
+        "calibre": {
+            "status": calibre_status,
+            "version": calibre_version
+        }
+    })
+
+@app.route("/api/v1/device_profiles", methods=["GET"])
+def api_device_profiles():
+    app.logger.info("API device profiles requested")
+    
+    profiles = {
+        "reMarkable": DEFAULT_PARAMS,
+        "boox_air_4c": BOOX_AIR_4C_PARAMS,
+    }
+    
+    return jsonify(profiles)
+
+@app.route("/api/v1/convert", methods=["POST"])
+def api_convert():
+    app.logger.info("API conversion requested")
+    
+    if 'epub_file' not in request.files:
+        app.logger.error("API: No file part in the request")
+        return jsonify({"error": "No file part"}), 400
+        
+    epub_file = request.files["epub_file"]
+    if not epub_file or epub_file.filename == "":
+        app.logger.error("API: No file selected")
+        return jsonify({"error": "No file selected"}), 400
+    
+    app.logger.info(f"API: File uploaded: {epub_file.filename}")
+    
+    job_id = str(uuid.uuid4())
+    app.logger.info(f"API: Created job ID: {job_id}")
+    
+    with tempfile.NamedTemporaryFile(suffix=".epub", dir=TEMP_DIR, delete=False) as input_tmp_file, \
+         tempfile.NamedTemporaryFile(suffix=".pdf", dir=TEMP_DIR, delete=False) as output_tmp_file:
+
+        input_path = input_tmp_file.name
+        output_path = output_tmp_file.name
+        
+        app.logger.debug(f"API: Created temporary files: input={input_path}, output={output_path}")
+
+        epub_file.save(input_path)
+        app.logger.debug(f"API: Saved uploaded file to {input_path}")
+
+        device_profile = request.form.get("device_profile", "reMarkable")
+        app.logger.info(f"API: Selected device profile: {device_profile}")
+
+        if device_profile == "reMarkable":
+            params = DEFAULT_PARAMS
+        elif device_profile == "boox_air_4c":
+            params = BOOX_AIR_4C_PARAMS
+        else:
+            params = {}
+            for key in DEFAULT_PARAMS.keys():
+                if key in request.form:
+                    if key in ["embed_all_fonts", "subset_embedded_fonts", "unsmarten_punctuation", "preserve_cover_aspect_ratio"]:
+                        params[key] = key in request.form and request.form.get(key) in ["true", "True", "1", "on"]
+                    else:
+                        params[key] = request.form.get(key)
+                else:
+                    params[key] = DEFAULT_PARAMS[key]
+        
+        app.logger.debug(f"API: Parameters: {params}")
+
+        command = [
+            "ebook-convert",
+            input_path,
+            output_path,
+            "--verbose",
+            "--debug",
+            f"--input-profile={params['input_profile']}",
+            f"--output-profile={params['output_profile']}",
+            f"--base-font-size={params['base_font_size']}",
+            f"--pdf-default-font-size={params['default_font_size']}",
+            f"--pdf-mono-font-size={params['mono_font_size']}",
+            f"--custom-size={params['custom_size']}",
+            f"--unit={params['unit']}",
+            f"--pdf-sans-family={params['pdf_sans_family']}",
+            f"--pdf-serif-family={params['pdf_serif_family']}",
+            f"--pdf-mono-family={params['pdf_mono_family']}",
+            f"--pdf-standard-font={params['pdf_standard_font']}",
+            f"--pdf-page-margin-left={params['pdf_page_margin_left']}",
+            f"--pdf-page-margin-right={params['pdf_page_margin_right']}",
+            f"--pdf-page-margin-top={params['pdf_page_margin_top']}",
+            f"--pdf-page-margin-bottom={params['pdf_page_margin_bottom']}",
+            f"--change-justification={params['change_justification']}"
+        ]
+
+        if params.get("embed_all_fonts", False):
+            command.append("--embed-all-fonts")
+        if params.get("subset_embedded_fonts", False):
+            command.append("--subset-embedded-fonts")
+        if params.get("unsmarten_punctuation", False):
+            command.append("--unsmarten-punctuation")
+        if params.get("preserve_cover_aspect_ratio", False):
+            command.append("--preserve-cover-aspect-ratio")
+            
+        app.logger.debug(f"API: Final command: {' '.join(command)}")
+
+        app.logger.info(f"API: Starting conversion thread for job {job_id}")
+        thread = threading.Thread(
+            target=run_conversion, 
+            args=(command, job_id, input_path, output_path)
+        )
+        thread.daemon = True
+        thread.start()
+        
+        save_jobs()
+        
+        base_url = request.url_root.rstrip('/')
+        response = {
+            "job_id": job_id,
+            "status_url": f"{base_url}/api/v1/jobs/{job_id}/status",
+            "download_url": f"{base_url}/api/v1/jobs/{job_id}/download",
+            "status": "processing"
+        }
+        
+        return jsonify(response), 202  # 202 Accepted
+
+@app.route("/api/v1/jobs/<job_id>/status", methods=["GET"])
+def api_job_status(job_id):
+    app.logger.info(f"API: Status requested for job {job_id}")
+    
+    if job_id in conversion_progress:
+        job_data = conversion_progress[job_id].copy()
+        
+        if 'detailed_logs' in job_data:
+            job_data['logs'] = job_data['detailed_logs'][-10:]
+            del job_data['detailed_logs']
+            
+        if job_data['status'] == 'completed':
+            base_url = request.url_root.rstrip('/')
+            job_data['download_url'] = f"{base_url}/api/v1/jobs/{job_id}/download"
+            
+        return jsonify(job_data)
+    
+    elif job_id in completed_files:
+        output_path = completed_files[job_id]
+        if os.path.exists(output_path):
+            base_url = request.url_root.rstrip('/')
+            return jsonify({
+                "status": "completed",
+                "progress": 100,
+                "message": "Conversion completed successfully",
+                "download_url": f"{base_url}/api/v1/jobs/{job_id}/download"
+            })
+
+    return jsonify({
+        "status": "not_found",
+        "error": "Job not found or expired"
+    }), 404
+
+@app.route("/api/v1/jobs/<job_id>/download", methods=["GET"])
+def api_job_download(job_id):
+    app.logger.info(f"API: Download requested for job {job_id}")
+
+    if job_id in completed_files:
+        output_path = completed_files[job_id]
+        if os.path.exists(output_path):
+            app.logger.info(f"API: Sending file {output_path} for job {job_id} (from completed_files)")
+            try:
+                return send_file(output_path, as_attachment=True, 
+                                download_name=f"converted_{job_id[:8]}.pdf",
+                                mimetype="application/pdf")
+            except Exception as e:
+                app.logger.error(f"API: Error sending file: {str(e)}")
+                return jsonify({"error": f"Error sending file: {str(e)}"}), 500
+    
+    return jsonify({"error": "File not found or job expired"}), 404
 
 if __name__ == "__main__":
     app.logger.info("Starting application")
