@@ -21,11 +21,18 @@ logging.basicConfig(
 app = Flask(__name__,
             static_folder='templates',
             static_url_path='/static')
-app.logger.setLevel(logging.DEBUG)
+
+DEBUG_MODE = os.environ.get('DEBUG_MODE', 'false').lower() in ['true', '1', 'yes', 'y']
+app.debug = DEBUG_MODE
+app.logger.setLevel(logging.DEBUG if DEBUG_MODE else logging.INFO)
+app.logger.info(f"Application running in {'DEBUG' if DEBUG_MODE else 'PRODUCTION'} mode")
 
 TEMP_DIR = os.environ.get('TEMP_DIR', tempfile.gettempdir())
+JOB_TIMEOUT = int(os.environ.get('JOB_TIMEOUT', 300))
+
 os.makedirs(TEMP_DIR, exist_ok=True)
 app.logger.info(f"Using temporary directory: {TEMP_DIR}")
+app.logger.info(f"Job cleanup timeout: {JOB_TIMEOUT}s")
 
 JOB_DATA_FILE = os.path.join(TEMP_DIR, 'conversion_jobs.pkl')
 
@@ -65,18 +72,68 @@ def save_completed_files():
     try:
         with open(COMPLETED_FILES_FILE, 'wb') as f:
             pickle.dump(completed_files, f)
-            
-        # Zusätzlich als einfache Textdatei speichern (Backup)
-        with open(COMPLETED_FILES_FILE + '.txt', 'w') as f:
-            for job_id, path in completed_files.items():
-                f.write(f"{job_id}={path}\n")
-                
+
         app.logger.debug(f"Saved {len(completed_files)} entries to {COMPLETED_FILES_FILE}")
     except Exception as e:
         app.logger.error(f"Error saving completed files: {str(e)}")
 
+def job_cleaner():
+    while True:
+        try:
+            current_time = time.time()
+            jobs_to_cleanup = []
+            
+            for job_id, job_data in list(conversion_progress.items()):
+                if 'completed_time' in job_data and job_data['status'] in ['completed', 'failed']:
+                    if current_time - job_data['completed_time'] >= JOB_TIMEOUT:
+                        jobs_to_cleanup.append(job_id)
+            
+            for job_id in jobs_to_cleanup:
+                app.logger.debug(f"Cleaning up job {job_id} after timeout")
+                try:
+                    input_path = conversion_progress[job_id].get('input_path')
+                    output_path = conversion_progress[job_id].get('output_path')
+                    
+                    if input_path and os.path.exists(input_path):
+                        os.remove(input_path)
+                        app.logger.debug(f"Deleted temporary input file: {input_path}")
+                    
+                    if output_path and os.path.exists(output_path):
+                        os.remove(output_path)
+                        app.logger.debug(f"Deleted temporary output file: {output_path}")
+
+                except Exception as e:
+                    app.logger.error(f"Error while cleaning up files for job {job_id}: {str(e)}")
+                
+                del conversion_progress[job_id]
+                save_jobs()
+                del completed_files[job_id]
+                save_completed_files()
+                
+        except Exception as e:
+            app.logger.error(f"Error in job_cleaner: {str(e)}")
+
+        time.sleep(30)
+
 conversion_progress = load_saved_jobs()
 completed_files = load_completed_files()
+
+cleaner_thread = threading.Thread(target=job_cleaner)
+cleaner_thread.daemon = True
+cleaner_thread.start()
+app.logger.info("Started job cleaner thread")
+
+def get_env_params(prefix, defaults):
+    params = {}
+    for key, default_value in defaults.items():
+        env_key = f"{prefix}_{key.upper()}"
+        
+        if isinstance(default_value, bool):
+            params[key] = os.environ.get(env_key, str(default_value)).lower() in ['true', '1', 'yes', 'y']
+        else:
+            params[key] = os.environ.get(env_key, default_value)
+    
+    return params
 
 DEFAULT_PARAMS = {
     "input_profile": "default",
@@ -101,7 +158,9 @@ DEFAULT_PARAMS = {
     "change_justification": "justify"
 }
 
-BOOX_AIR_4C_PARAMS = {
+REMARKABLE_PARAMS = get_env_params("REMARKABLE", DEFAULT_PARAMS.copy())
+
+BOOX_AIR_4C_DEFAULT = {
     "input_profile": "default",
     "output_profile": "generic_eink_hd",
     "base_font_size": "12",
@@ -123,6 +182,8 @@ BOOX_AIR_4C_PARAMS = {
     "preserve_cover_aspect_ratio": True,
     "change_justification": "justify"
 }
+
+BOOX_AIR_4C_PARAMS = get_env_params("BOOX_AIR_4C", BOOX_AIR_4C_DEFAULT)
 
 def run_conversion(command, job_id, input_path, output_path):
     try:
@@ -146,6 +207,7 @@ def run_conversion(command, job_id, input_path, output_path):
             'status': 'running', 
             'progress': 0, 
             'message': 'Starting conversion...',
+            'input_path': input_path,
             'output_path': output_path,
             'detailed_logs': []
         }
@@ -192,6 +254,7 @@ def run_conversion(command, job_id, input_path, output_path):
             conversion_progress[job_id]['status'] = 'completed'
             conversion_progress[job_id]['progress'] = 100
             conversion_progress[job_id]['message'] = 'Conversion completed successfully!'
+            conversion_progress[job_id]['completed_time'] = time.time()
             
             if os.path.exists(output_path):
                 app.logger.debug(f"Output file exists: {os.path.exists(output_path)}")
@@ -208,7 +271,8 @@ def run_conversion(command, job_id, input_path, output_path):
             app.logger.error(f"Conversion job {job_id} failed with return code {returncode}")
             conversion_progress[job_id]['status'] = 'failed'
             conversion_progress[job_id]['message'] = f'Conversion failed with code {returncode}! Check logs for details.'
-            
+            conversion_progress[job_id]['completed_time'] = time.time()
+
             error_details = '\n'.join(full_output[-10:]) if full_output else "No output captured"
             conversion_progress[job_id]['error_details'] = error_details
             
@@ -225,14 +289,8 @@ def run_conversion(command, job_id, input_path, output_path):
         conversion_progress[job_id]['status'] = 'failed'
         conversion_progress[job_id]['message'] = error_msg
         conversion_progress[job_id]['error_details'] = error_msg
+        conversion_progress[job_id]['completed_time'] = time.time()
         
-        save_jobs()
-    
-    app.logger.debug(f"Keeping job {job_id} results available for 300 seconds...")
-    time.sleep(300)
-    if job_id in conversion_progress:
-        app.logger.debug(f"Cleaning up job {job_id}")
-        del conversion_progress[job_id]
         save_jobs()
 
 @app.route("/", methods=["GET", "POST"])
@@ -269,7 +327,7 @@ def index():
             app.logger.info(f"Selected device profile: {device_profile}")
             
             if device_profile == "reMarkable":
-                params = DEFAULT_PARAMS
+                params = REMARKABLE_PARAMS
             elif device_profile == "boox_air_4c":
                 params = BOOX_AIR_4C_PARAMS
             else:
@@ -454,7 +512,8 @@ def system_info():
         "environment": dict(os.environ),
         "disk_space": os.popen("df -h").read(),
         "active_jobs": len(conversion_progress),
-        "completed_files": len(completed_files)
+        "completed_files": len(completed_files),
+        "job_timeout": JOB_TIMEOUT,
     }
     
     try:
@@ -511,7 +570,7 @@ def api_device_profiles():
     app.logger.info("API device profiles requested")
     
     profiles = {
-        "reMarkable": DEFAULT_PARAMS,
+        "reMarkable": REMARKABLE_PARAMS,
         "boox_air_4c": BOOX_AIR_4C_PARAMS,
     }
     
@@ -550,7 +609,7 @@ def api_convert():
         app.logger.info(f"API: Selected device profile: {device_profile}")
 
         if device_profile == "reMarkable":
-            params = DEFAULT_PARAMS
+            params = REMARKABLE_PARAMS
         elif device_profile == "boox_air_4c":
             params = BOOX_AIR_4C_PARAMS
         else:
@@ -674,4 +733,4 @@ def api_job_download(job_id):
 
 if __name__ == "__main__":
     app.logger.info("Starting application")
-    app.run(debug=True)
+    app.run(debug=DEBUG_MODE)

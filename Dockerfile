@@ -39,4 +39,4 @@ USER appuser
 
 EXPOSE 80
 
-CMD ["gunicorn", "app:app", "-b", "0.0.0.0:80", "-w", "4", "--timeout", "300"]
+CMD gunicorn app:app -b 0.0.0.0:80 -w 4 --timeout ${GUNICORN_TIMEOUT:-300}

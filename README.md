@@ -16,6 +16,66 @@ This project has been heavily influenced by AI tooling of claude.ai.
 ### Finished conversion
 ![Finished conversion](screenshots/conversion_completed.png)
 
+## Environment variables
+
+# Configurable Environment Variables
+
+Here's a comprehensive list of all environment variables that can be used to configure the application:
+
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `DEBUG_MODE` | Enable debug mode for more verbose logging | `false` |
+| `TEMP_DIR` | Directory for temporary files | `/tmp` |
+| `JOB_TIMEOUT` | Time (in seconds) that conversion results remain available after completion | `300` |
+| `GUNICORN_TIMEOUT` | Timeout for the Gunicorn worker (in seconds) | `300` |
+| `VIRTUAL_HOST` | Hostname for Nginx proxy | - |
+| `LETSENCRYPT_HOST` | Hostname for Let's Encrypt SSL | - |
+| `LETSENCRYPT_EMAIL` | Email address for Let's Encrypt notifications | - |
+| **reMarkable Profile** |
+| `REMARKABLE_INPUT_PROFILE` | Input profile for reMarkable Paper Pro | `default` |
+| `REMARKABLE_OUTPUT_PROFILE` | Output profile for reMarkable Paper Pro | `generic_eink_hd` |
+| `REMARKABLE_BASE_FONT_SIZE` | Base font size for reMarkable Paper Pro | `12` |
+| `REMARKABLE_DEFAULT_FONT_SIZE` | Default font size for reMarkable Paper Pro | `18` |
+| `REMARKABLE_MONO_FONT_SIZE` | Monospace font size for reMarkable Paper Pro | `16` |
+| `REMARKABLE_CUSTOM_SIZE` | Custom size (width x height) for reMarkable Paper Pro | `1620x2160` |
+| `REMARKABLE_UNIT` | Unit for custom size for reMarkable Paper Pro | `pixel` |
+| `REMARKABLE_PDF_SANS_FAMILY` | Sans font family for reMarkable Paper Pro | `IBM Plex Sans` |
+| `REMARKABLE_PDF_SERIF_FAMILY` | Serif font family for reMarkable Paper Pro | `IBM Plex Serif` |
+| `REMARKABLE_PDF_MONO_FAMILY` | Monospace font family for reMarkable Paper Pro | `IBM Plex Mono` |
+| `REMARKABLE_PDF_STANDARD_FONT` | Standard font for reMarkable Paper Pro | `serif` |
+| `REMARKABLE_PDF_PAGE_MARGIN_LEFT` | Left page margin for reMarkable Paper Pro | `72` |
+| `REMARKABLE_PDF_PAGE_MARGIN_RIGHT` | Right page margin for reMarkable Paper Pro | `20` |
+| `REMARKABLE_PDF_PAGE_MARGIN_TOP` | Top page margin for reMarkable Paper Pro | `20` |
+| `REMARKABLE_PDF_PAGE_MARGIN_BOTTOM` | Bottom page margin for reMarkable Paper Pro | `20` |
+| `REMARKABLE_EMBED_ALL_FONTS` | Embed all fonts in PDF for reMarkable Paper Pro | `true` |
+| `REMARKABLE_SUBSET_EMBEDDED_FONTS` | Subset embedded fonts for reMarkable Paper Pro | `true` |
+| `REMARKABLE_UNSMARTEN_PUNCTUATION` | Simplify punctuation for reMarkable Paper Pro | `true` |
+| `REMARKABLE_PRESERVE_COVER_ASPECT_RATIO` | Preserve cover aspect ratio for reMarkable Paper Pro | `true` |
+| `REMARKABLE_CHANGE_JUSTIFICATION` | Text justification for reMarkable Paper Pro | `justify` |
+| **Boox Air 4C Profile** |
+| `BOOX_AIR_4C_INPUT_PROFILE` | Input profile for Boox Air 4C  | `default` |
+| `BOOX_AIR_4C_OUTPUT_PROFILE` | Output profile for Boox Air 4C  | `generic_eink_hd` |
+| `BOOX_AIR_4C_BASE_FONT_SIZE` | Base font size for Boox Air 4C  | `12` |
+| `BOOX_AIR_4C_DEFAULT_FONT_SIZE` | Default font size for Boox Air 4C  | `16` |
+| `BOOX_AIR_4C_MONO_FONT_SIZE` | Monospace font size for Boox Air 4C  | `14` |
+| `BOOX_AIR_4C_CUSTOM_SIZE` | Custom size (width x height) for Boox Air 4C  | `1860x2480` |
+| `BOOX_AIR_4C_UNIT` | Unit for custom size for Boox Air 4C  | `pixel` |
+| `BOOX_AIR_4C_PDF_SANS_FAMILY` | Sans font family for Boox Air 4C  | `IBM Plex Sans` |
+| `BOOX_AIR_4C_PDF_SERIF_FAMILY` | Serif font family for Boox Air 4C  | `IBM Plex Serif` |
+| `BOOX_AIR_4C_PDF_MONO_FAMILY` | Monospace font family for Boox Air 4C  | `IBM Plex Mono` |
+| `BOOX_AIR_4C_PDF_STANDARD_FONT` | Standard font for Boox Air 4C  | `serif` |
+| `BOOX_AIR_4C_PDF_PAGE_MARGIN_LEFT` | Left page margin for Boox Air 4C  | `72` |
+| `BOOX_AIR_4C_PDF_PAGE_MARGIN_RIGHT` | Right page margin for Boox Air 4C  | `20` |
+| `BOOX_AIR_4C_PDF_PAGE_MARGIN_TOP` | Top page margin for Boox Air 4C  | `20` |
+| `BOOX_AIR_4C_PDF_PAGE_MARGIN_BOTTOM` | Bottom page margin for Boox Air 4C  | `20` |
+| `BOOX_AIR_4C_EMBED_ALL_FONTS` | Embed all fonts in PDF for Boox Air 4C  | `true` |
+| `BOOX_AIR_4C_SUBSET_EMBEDDED_FONTS` | Subset embedded fonts for Boox Air 4C  | `true` |
+| `BOOX_AIR_4C_UNSMARTEN_PUNCTUATION` | Simplify punctuation for Boox Air 4C  | `true` |
+| `BOOX_AIR_4C_PRESERVE_COVER_ASPECT_RATIO` | Preserve cover aspect ratio for Boox Air 4C  | `true` |
+| `BOOX_AIR_4C_CHANGE_JUSTIFICATION` | Text justification for Boox Air 4C  | `justify` |
+
+The application can be configured using these environment variables in the `.env` file or directly in the `docker-compose.yml`. 
+
 ## REST API
 This document describes the REST API for the eBook to PDF converter. The API allows you to convert EPUB files to PDF programmatically, check conversion status, and download the converted files.
 
