@@ -205,8 +205,8 @@ def run_conversion(command, job_id, input_path, output_path):
         
         conversion_progress[job_id] = {
             'status': 'running', 
-            'progress': 0, 
-            'message': 'Starting conversion...',
+            'progress': 1, 
+            'message': 'Running conversion...',
             'input_path': input_path,
             'output_path': output_path,
             'detailed_logs': []
@@ -397,15 +397,24 @@ def index():
             app.logger.debug(f"Final command: {' '.join(command)}")
 
             app.logger.info(f"Starting conversion thread for job {job_id}")
+
+            conversion_progress[job_id] = {
+                'status': 'starting', 
+                'progress': 0, 
+                'message': 'Starting conversion...',
+                'input_path': input_path,
+                'output_path': output_path,
+                'detailed_logs': []
+            }
+            save_jobs()
+
             thread = threading.Thread(
                 target=run_conversion, 
                 args=(command, job_id, input_path, output_path)
             )
             thread.daemon = True
             thread.start()
-            
-            save_jobs()
-            
+
             app.logger.info(f"Redirecting to progress page for job {job_id}")
             return render_template("progress.html", job_id=job_id)
 
@@ -415,8 +424,7 @@ def index():
 @app.route("/progress/<job_id>")
 def progress(job_id):
     app.logger.info(f"SSE connection established for job {job_id}")
-    time.sleep(0.5)
-    
+
     def generate():
         if job_id not in conversion_progress:
             app.logger.warning(f"Job {job_id} not found in conversion_progress")
@@ -662,15 +670,24 @@ def api_convert():
         app.logger.debug(f"API: Final command: {' '.join(command)}")
 
         app.logger.info(f"API: Starting conversion thread for job {job_id}")
+
+        conversion_progress[job_id] = {
+            'status': 'starting', 
+            'progress': 0, 
+            'message': 'Starting conversion...',
+            'input_path': input_path,
+            'output_path': output_path,
+            'detailed_logs': []
+        }
+        save_jobs()
+
         thread = threading.Thread(
             target=run_conversion, 
             args=(command, job_id, input_path, output_path)
         )
         thread.daemon = True
         thread.start()
-        
-        save_jobs()
-        
+
         base_url = request.url_root.rstrip('/')
         response = {
             "job_id": job_id,
