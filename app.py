@@ -415,6 +415,7 @@ def index():
 @app.route("/progress/<job_id>")
 def progress(job_id):
     app.logger.info(f"SSE connection established for job {job_id}")
+    time.sleep(0.5)
     
     def generate():
         if job_id not in conversion_progress:
