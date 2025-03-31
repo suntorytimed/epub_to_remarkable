@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System-Diagnose</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="language-switcher">
+        <button class="language-btn active" data-lang="de">DE</button>
+        <button class="language-btn" data-lang="en">EN</button>
+    </div>
+
+    <h1 data-i18n="systemDiagnosis">System-Diagnose</h1>
+    <span class="accent-line"></span>
+    
+    <div class="section">
+        <h2 data-i18n="systemStatus">Systemstatus</h2>
+        
+        <div class="status-item">
+            <div class="status-indicator {{ 'status-ok' if info.get('calibre_version') and 'Unknown' not in info.get('calibre_version') else 'status-error' }}"></div>
+            <div>
+                <strong data-i18n="calibre">Calibre:</strong> {{ info.get('calibre_version', 'Nicht gefunden') }}
+                {% if info.get('calibre_error') %}
+                <pre>{{ info.get('calibre_error') }}</pre>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="status-item">
+            <div class="status-indicator {{ 'status-ok' if info.get('temp_directory_writable') else 'status-error' }}"></div>
+            <div>
+                <strong data-i18n="tempDirectory">Temporäres Verzeichnis:</strong> 
+                {{ info.get('temp_directory', 'Unbekannt') }}
+                (<span data-i18n="{{ 'writable' if info.get('temp_directory_writable') else 'notWritable' }}">{{ 'Schreibbar' if info.get('temp_directory_writable') else 'Nicht schreibbar' }}</span>)
+            </div>
+        </div>
+        
+        <div class="status-item">
+            <div class="status-indicator status-ok"></div>
+            <div>
+                <strong data-i18n="pythonVersion">Python Version:</strong> {{ info.get('python_version', 'Unbekannt') }}
+            </div>
+        </div>
+        
+        <div class="status-item">
+            <div class="status-indicator status-ok"></div>
+            <div>
+                <strong data-i18n="activeJobs">Aktive Jobs:</strong> {{ info.get('active_jobs', 0) }}
+            </div>
+        </div>
+        
+        <div class="status-item">
+            <div class="status-indicator status-ok"></div>
+            <div>
+                <strong data-i18n="completedFiles">Abgeschlossene Dateien:</strong> {{ info.get('completed_files', 0) }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2 data-i18n="availableFonts">Verfügbare Schriftarten</h2>
+        
+        <div class="fonts-list">
+            {% if info.get('fonts') %}
+                {% for font in info.get('fonts') %}
+                    <div>{{ font }}</div>
+                {% endfor %}
+            {% elif info.get('fonts_error') %}
+                <div data-i18n="errorRetrievingFonts">Fehler beim Abrufen der Schriftarten: {{ info.get('fonts_error') }}</div>
+            {% else %}
+                <div data-i18n="noFontsFound">Keine Schriftarten gefunden</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2 data-i18n="diskSpace">Speicherplatz</h2>
+        <pre>{{ info.get('disk_space', 'Keine Informationen verfügbar') }}</pre>
+    </div>
+    
+    <div class="section">
+        <h2 data-i18n="environmentVariables">Umgebungsvariablen</h2>
+        <div style="max-height: 300px; overflow-y: auto;">
+            <pre>{{ info.get('environment', {}) | pprint }}</pre>
+        </div>
+    </div>
+    
+    <a href="/" class="action-btn" data-i18n="backToHomepage">Zurück zur Startseite</a>
+
+    <script>
+        const translations = {
+            de: {
+                systemDiagnosis: "System-Diagnose",
+                systemStatus: "Systemstatus",
+                calibre: "Calibre:",
+                ibmPlexFonts: "IBM Plex Schriftarten:",
+                installed: "Installiert",
+                notFound: "Nicht gefunden",
+                tempDirectory: "Temporäres Verzeichnis:",
+                writable: "Schreibbar",
+                notWritable: "Nicht schreibbar",
+                pythonVersion: "Python Version:",
+                activeJobs: "Aktive Jobs:",
+                completedFiles: "Abgeschlossene Dateien:",
+                availableFonts: "Verfügbare Schriftarten",
+                errorRetrievingFonts: "Fehler beim Abrufen der Schriftarten:",
+                noFontsFound: "Keine Schriftarten gefunden",
+                diskSpace: "Speicherplatz",
+                environmentVariables: "Umgebungsvariablen",
+                backToHomepage: "Zurück zur Startseite"
+            },
+            en: {
+                systemDiagnosis: "System Diagnosis",
+                systemStatus: "System Status",
+                calibre: "Calibre:",
+                ibmPlexFonts: "IBM Plex Fonts:",
+                installed: "Installed",
+                notFound: "Not found",
+                tempDirectory: "Temporary Directory:",
+                writable: "Writable",
+                notWritable: "Not writable",
+                pythonVersion: "Python Version:",
+                activeJobs: "Active Jobs:",
+                completedFiles: "Completed Files:",
+                availableFonts: "Available Fonts",
+                errorRetrievingFonts: "Error retrieving fonts:",
+                noFontsFound: "No fonts found",
+                diskSpace: "Disk Space",
+                environmentVariables: "Environment Variables",
+                backToHomepage: "Back to Homepage"
+            }
+        };
+        
+        let currentLanguage = 'de';
+        
+        function updateLanguage(lang) {
+            currentLanguage = lang;
+            
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = translations[lang][key];
+                    } else {
+                        element.textContent = translations[lang][key];
+                    }
+                }
+            });
+            
+            document.querySelectorAll('.language-btn').forEach(button => {
+                if (button.getAttribute('data-lang') === lang) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+            
+            localStorage.setItem('preferredLanguage', lang);
+            
+            document.documentElement.lang = lang;
+        }
+        
+        document.querySelectorAll('.language-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                updateLanguage(this.getAttribute('data-lang'));
+            });
+        });
+        
+        const savedLanguage = localStorage.getItem('preferredLanguage');
+        if (savedLanguage) {
+            updateLanguage(savedLanguage);
+        }
+    </script>
+</body>
+</html>

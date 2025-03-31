@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eBook to PDF Converter</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        #button-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: calc(var(--spacing-unit) * 3);
+            gap: 10px;
+        }
+
+        .status-indicator {
+            margin-bottom: calc(var(--spacing-unit) * 3);
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .status-indicator h2 {
+            margin: 0;
+            white-space: nowrap;
+        }
+        
+        .tooltip {
+            margin-left: 10px;
+            position: relative;
+        }
+        
+        .circle-heading {
+            display: flex;
+            align-items: center;
+            margin-top: calc(var(--spacing-unit) * 3);
+            margin-bottom: calc(var(--spacing-unit) * 2);
+            clear: both;
+        }
+        
+        .status-message {
+            clear: both;
+        }
+        
+        .progress-bar {
+            margin-top: calc(var(--spacing-unit) * 3);
+            clear: both;
+        }
+    </style>
+</head>
+<body>
+    <div class="language-switcher">
+        <button class="language-btn active" data-lang="de">DE</button>
+        <button class="language-btn" data-lang="en">EN</button>
+    </div>
+
+    <h1 data-i18n="title">eBook to PDF Converter</h1>
+    <span class="accent-line"></span>
+    
+    <div class="progress-container section">
+        <div class="status-indicator">
+            <div id="status-dot" class="status-dot"></div>
+            <h2><span data-i18n="status">Status</span>: <span id="status-text" data-i18n="statusRunning">Konvertierung läuft...</span></h2>
+            <div class="tooltip">
+                <div class="tooltip-icon">?</div>
+                <span class="tooltip-text" data-i18n="tooltip">Wenn der Status nicht korrekt angezeigt wird, kann es sein, dass die Konvertierung trotzdem im Hintergrund läuft. Bitte warten Sie einige Minuten und klicken Sie dann auf "Nach PDF suchen".</span>
+            </div>
+        </div>
+        
+        <div id="status-inconsistency" class="notification hidden">
+            <strong data-i18n="attention">Achtung:</strong> <span data-i18n="statusInconsistency">Die Statusanzeige ist widersprüchlich. Bitte klicken Sie auf "Nach PDF suchen", um den tatsächlichen Status zu prüfen.</span>
+        </div>
+        
+        <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <div class="progress-label"><span id="progress-percent">0%</span></div>
+        
+        <div class="circle-heading">
+            <div class="circle"></div> <strong data-i18n="conversionDetails">Konvertierungsdetails</strong>
+        </div>
+        <div class="status-message" id="status-message">
+            <span data-i18n="startingConversion">Starte Konvertierung...</span>
+        </div>
+        
+        <div id="error-details" class="hidden">
+            <div class="circle-heading">
+                <div class="circle"></div> <strong data-i18n="errorMessage">Fehlermeldung</strong>
+            </div>
+            <div class="status-message" id="error-message"></div>
+        </div>
+        
+        <div id="button-container">
+            <a id="download-btn" class="action-btn green" style="display: none;" data-i18n="downloadPDF">PDF herunterladen</a>
+            <a href="/" class="action-btn" id="back-btn" data-i18n="backToForm">Zurück zum Formular</a>
+            <button id="find-pdf-btn" class="action-btn blue hidden" data-i18n="findPDF">Nach PDF suchen</button>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            de: {
+                title: "eBook to PDF Converter",
+                status: "Status",
+                statusRunning: "Konvertierung läuft...",
+                statusCompleted: "Abgeschlossen",
+                statusFailed: "Fehlgeschlagen",
+                statusLostConnection: "Verbindung verloren",
+                statusSearching: "Suche nach PDF...",
+                statusInProgress: "In Bearbeitung",
+                tooltip: "Wenn der Status nicht korrekt angezeigt wird, kann es sein, dass die Konvertierung trotzdem im Hintergrund läuft. Bitte warten Sie einige Minuten und klicken Sie dann auf \"Nach PDF suchen\".",
+                startingConversion: "Starte Konvertierung...",
+                conversionDetails: "Konvertierungsdetails",
+                errorMessage: "Fehlermeldung",
+                downloadPDF: "PDF herunterladen",
+                backToForm: "Zurück zum Formular",
+                findPDF: "Nach PDF suchen",
+                searchingPDF: "Suche nach abgeschlossener Konvertierung...",
+                conversionSuccessful: "Konvertierung erfolgreich abgeschlossen!",
+                conversionInProgress: "Die Konvertierung scheint noch im Gange zu sein oder ist fehlgeschlagen. Bitte versuchen Sie es später erneut.",
+                errorOccurred: "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
+                connectionLost: "Die Server-Verbindung wurde unterbrochen. Die Konvertierung läuft aber möglicherweise noch im Hintergrund. Bitte verwenden Sie den \"Nach PDF suchen\"-Button, um nach der fertigen PDF zu suchen.",
+                attention: "Achtung",
+                statusInconsistency: "Die Statusanzeige ist widersprüchlich. Bitte klicken Sie auf \"Nach PDF suchen\", um den tatsächlichen Status zu prüfen.",
+                jobNotFoundError: "Der Konvertierungsauftrag wurde nicht gefunden. Dies kann passieren, wenn:\n- Die Seite neu geladen wurde\n- Der Server neu gestartet wurde\n- Der Auftrag bereits abgeschlossen oder abgelaufen ist\n\nBitte versuchen Sie es erneut mit einer neuen Konvertierung."
+            },
+            en: {
+                title: "eBook to PDF Converter",
+                status: "Status",
+                statusRunning: "Conversion in progress...",
+                statusCompleted: "Completed",
+                statusFailed: "Failed",
+                statusLostConnection: "Connection lost",
+                statusSearching: "Searching for PDF...",
+                statusInProgress: "In progress",
+                tooltip: "If the status is not displayed correctly, the conversion may still be running in the background. Please wait a few minutes and then click \"Find PDF\".",
+                startingConversion: "Starting conversion...",
+                conversionDetails: "Conversion Details",
+                errorMessage: "Error Message",
+                downloadPDF: "Download PDF",
+                backToForm: "Back to Form",
+                findPDF: "Find PDF",
+                searchingPDF: "Looking for completed conversion...",
+                conversionSuccessful: "Conversion completed successfully!",
+                conversionInProgress: "The conversion appears to be still in progress or has failed. Please try again later.",
+                errorOccurred: "An error occurred. Please try again later.",
+                connectionLost: "The server connection was interrupted. The conversion may still be running in the background. Please use the \"Find PDF\" button to check for the completed PDF.",
+                attention: "Attention",
+                statusInconsistency: "The status display is inconsistent. Please click on \"Find PDF\" to check the actual status.",
+                jobNotFoundError: "The conversion job was not found. This can happen if:\n- The page was reloaded\n- The server was restarted\n- The job has already completed or expired\n\nPlease try again with a new conversion."
+            }
+        };
+        
+        let currentLanguage = 'de';
+        
+        function updateLanguage(lang) {
+            currentLanguage = lang;
+            
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = translations[lang][key];
+                    } else {
+                        element.textContent = translations[lang][key];
+                    }
+                }
+            });
+            
+            document.querySelectorAll('.language-btn').forEach(button => {
+                if (button.getAttribute('data-lang') === lang) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+            
+            localStorage.setItem('preferredLanguage', lang);
+            
+            document.documentElement.lang = lang;
+        }
+        
+        document.querySelectorAll('.language-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                updateLanguage(this.getAttribute('data-lang'));
+            });
+        });
+        
+        const savedLanguage = localStorage.getItem('preferredLanguage');
+        if (savedLanguage) {
+            updateLanguage(savedLanguage);
+        }
+        
+        const jobId = "{{ job_id }}";
+        let messageLog = [];
+        let eventSource = null;
+        let connectionAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 3;
+        let jobNotFoundReceived = false;
+        
+        function connectEventSource() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            connectionAttempts++;
+            
+            if (connectionAttempts > MAX_RECONNECT_ATTEMPTS) {
+                console.log("Maximum reconnection attempts reached");
+                document.getElementById('status-text').textContent = translations[currentLanguage].statusLostConnection;
+                document.getElementById('status-message').textContent = translations[currentLanguage].connectionLost;
+                updateFindPdfButtonVisibility();
+                return;
+            }
+            
+            eventSource = new EventSource(`/progress/${jobId}`);
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.message && data.message.includes("Job not found")) {
+                    jobNotFoundReceived = true;
+                    updateFindPdfButtonVisibility();
+                    return;
+                }
+                
+                if (data.reconnect) {
+                    setTimeout(connectEventSource, 1000);
+                    return;
+                }
+                
+                const progressFill = document.getElementById('progress-fill');
+                progressFill.style.width = `${data.progress}%`;
+                
+                const progressPercent = document.getElementById('progress-percent');
+                progressPercent.textContent = `${data.progress}%`;
+                
+                if (data.message && !messageLog.includes(data.message)) {
+                    messageLog.push(data.message);
+                    const statusMessage = document.getElementById('status-message');
+                    statusMessage.textContent = data.message;
+                }
+                
+                const statusText = document.getElementById('status-text');
+                const statusDot = document.getElementById('status-dot');
+                
+                if (data.status === 'completed') {
+                    statusText.textContent = translations[currentLanguage].statusCompleted;
+                    statusDot.classList.remove('failed');
+                    statusDot.classList.add('completed');
+                    
+                    document.getElementById('download-btn').style.display = 'inline-block';
+                    document.getElementById('download-btn').href = `/download/${jobId}`;
+                    updateFindPdfButtonVisibility();
+                    
+                    eventSource.close();
+                    
+                    if (jobNotFoundReceived) {
+                        document.getElementById('status-inconsistency').classList.remove('hidden');
+                    }
+                } 
+                else if (data.status === 'failed') {
+                    statusText.textContent = translations[currentLanguage].statusFailed;
+                    statusDot.classList.remove('completed');
+                    statusDot.classList.add('failed');
+                    
+                    if (data.error_details) {
+                        document.getElementById('error-details').classList.remove('hidden');
+                        document.getElementById('error-message').textContent = data.error_details;
+                    }
+                    
+                    updateFindPdfButtonVisibility();
+                    
+                    eventSource.close();
+                    
+                    if (progressFill.style.width === '100%' || jobNotFoundReceived) {
+                        document.getElementById('status-inconsistency').classList.remove('hidden');
+                    }
+                }
+            };
+            
+            eventSource.onerror = function() {
+                console.error('Verbindung zum Server unterbrochen');
+                
+                if (connectionAttempts <= MAX_RECONNECT_ATTEMPTS) {
+                    setTimeout(connectEventSource, 3000);
+                } else {
+                    document.getElementById('status-text').textContent = translations[currentLanguage].statusLostConnection;
+                    document.getElementById('status-message').textContent = translations[currentLanguage].connectionLost;
+                    updateFindPdfButtonVisibility();
+                }
+            };
+        }
+        
+        function updateFindPdfButtonVisibility() {
+            const findPdfBtn = document.getElementById('find-pdf-btn');
+            if (connectionAttempts > MAX_RECONNECT_ATTEMPTS || jobNotFoundReceived) {
+                findPdfBtn.classList.remove('hidden');
+            } else {
+                findPdfBtn.classList.add('hidden');
+            }
+        }
+        
+        document.getElementById('find-pdf-btn').addEventListener('click', function() {
+            const statusText = document.getElementById('status-text');
+            const statusMessage = document.getElementById('status-message');
+            statusText.textContent = translations[currentLanguage].statusSearching;
+            statusMessage.textContent = translations[currentLanguage].searchingPDF;
+            
+            fetch(`/download/${jobId}`)
+                .then(response => {
+                    if (response.ok) {
+                        statusText.textContent = translations[currentLanguage].statusCompleted;
+                        statusMessage.textContent = translations[currentLanguage].conversionSuccessful;
+                        document.getElementById('status-dot').classList.remove('failed');
+                        document.getElementById('status-dot').classList.add('completed');
+                        
+                        document.getElementById('download-btn').style.display = 'inline-block';
+                        document.getElementById('download-btn').href = `/download/${jobId}`;
+                        document.getElementById('find-pdf-btn').classList.add('hidden');
+                        
+                        document.getElementById('status-inconsistency').classList.add('hidden');
+                        
+                        document.getElementById('error-details').classList.add('hidden');
+                    } else {
+                        statusText.textContent = translations[currentLanguage].statusInProgress;
+                        statusMessage.textContent = translations[currentLanguage].conversionInProgress;
+                    }
+                })
+                .catch(error => {
+                    console.error('Fehler beim Suchen der PDF:', error);
+                    statusText.textContent = translations[currentLanguage].statusFailed;
+                    statusMessage.textContent = translations[currentLanguage].errorOccurred;
+                });
+        });
+        
+        connectEventSource();
+        
+        updateFindPdfButtonVisibility();
+    </script>
+</body>
+</html>

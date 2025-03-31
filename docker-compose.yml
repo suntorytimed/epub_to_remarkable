@@ -1,0 +1,15 @@
+services:
+  web:
+    restart: unless-stopped
+    build: .
+    environment:
+      - VIRTUAL_HOST={$VIRTUAL_HOST}
+      - LETSENCRYPT_HOST={$LETSENCRYPT_HOST}
+      - LETSENCRYPT_EMAIL={$LETSENCRYPT_EMAIL}
+      - PYTHONUNBUFFERED=1
+    network_mode: bridge
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

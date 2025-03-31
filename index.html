@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eBook to PDF Converter</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="language-switcher">
+        <button class="language-btn active" data-lang="de">DE</button>
+        <button class="language-btn" data-lang="en">EN</button>
+    </div>
+
+    <h1 data-i18n="title">eBook to PDF Converter</h1>
+    <span class="accent-line"></span>
+    
+    <form action="/" method="POST" enctype="multipart/form-data">
+        <div class="section">
+            <div class="form-header">
+                <span class="circle"></span>
+                <h2 data-i18n="deviceSelection">Geräteauswahl</h2>
+            </div>
+            
+            <label for="device_profile" data-i18n="selectDeviceProfile">Wähle Geräteprofil:</label>
+            <select name="device_profile" id="device_profile" onchange="toggleParams()">
+                <option value="reMarkable" data-i18n="remarkablePro">reMarkable Paper Pro</option>
+                <option value="boox_air_4c" data-i18n="booxAir4c">Boox Air 4c</option>
+                <option value="user_defined" data-i18n="userDefined">Benutzerdefiniert</option>
+            </select>
+            
+            <div class="form-header">
+                <span class="circle"></span>
+                <h2 data-i18n="uploadFile">Datei hochladen</h2>
+            </div>
+            <label for="epub_file" data-i18n="selectEpubFile">EPUB-Datei auswählen:</label>
+            <input type="file" name="epub_file" id="epub_file" accept=".epub" required>
+        </div>
+
+        <!-- Parameters for user-defined configuration -->
+        <div id="parameters" class="section" style="display: none;">
+            <div class="form-header">
+                <span class="circle"></span>
+                <h2 data-i18n="conversionParameters">Konvertierungsparameter</h2>
+            </div>
+
+            <div class="grid">
+                <div>
+                    <label for="input_profile" data-i18n="inputProfile">Eingabeprofil:</label>
+                    <input type="text" name="input_profile" id="input_profile" value="{{ default_params['input_profile'] }}">
+                </div>
+                
+                <div>
+                    <label for="output_profile" data-i18n="outputProfile">Ausgabeprofil:</label>
+                    <input type="text" name="output_profile" id="output_profile" value="{{ default_params['output_profile'] }}">
+                </div>
+            </div>
+
+            <h3 data-i18n="fontSizes">Schriftgrößen</h3>
+            <div class="grid">
+                <div>
+                    <label for="base_font_size" data-i18n="baseFontSize">Basis-Schriftgröße:</label>
+                    <input type="text" name="base_font_size" id="base_font_size" value="{{ default_params['base_font_size'] }}">
+                </div>
+                
+                <div>
+                    <label for="default_font_size" data-i18n="defaultFontSize">Standard-Schriftgröße:</label>
+                    <input type="text" name="default_font_size" id="default_font_size" value="{{ default_params['default_font_size'] }}">
+                </div>
+                
+                <div>
+                    <label for="mono_font_size" data-i18n="monoFontSize">Monospace-Schriftgröße:</label>
+                    <input type="text" name="mono_font_size" id="mono_font_size" value="{{ default_params['mono_font_size'] }}">
+                </div>
+            </div>
+
+            <h3 data-i18n="fontOptions">Schriftoptionen</h3>
+            <div class="checkbox-container">
+                <input type="checkbox" name="embed_all_fonts" id="embed_all_fonts" {% if default_params['embed_all_fonts'] %}checked{% endif %}>
+                <label for="embed_all_fonts" data-i18n="embedAllFonts">Alle Schriften einbetten</label>
+            </div>
+            
+            <div class="checkbox-container">
+                <input type="checkbox" name="subset_embedded_fonts" id="subset_embedded_fonts" {% if default_params['subset_embedded_fonts'] %}checked{% endif %}>
+                <label for="subset_embedded_fonts" data-i18n="subsetEmbeddedFonts">Eingebettete Schriften beschränken</label>
+            </div>
+            
+            <div class="checkbox-container">
+                <input type="checkbox" name="unsmarten_punctuation" id="unsmarten_punctuation" {% if default_params['unsmarten_punctuation'] %}checked{% endif %}>
+                <label for="unsmarten_punctuation" data-i18n="unsmartenPunctuation">Anführungszeichen vereinfachen</label>
+            </div>
+
+            <h3 data-i18n="sizeLayout">Größe & Layout</h3>
+            <div class="grid">
+                <div>
+                    <label for="custom_size" data-i18n="customSize">Benutzerdefinierte Größe:</label>
+                    <input type="text" name="custom_size" id="custom_size" value="{{ default_params['custom_size'] }}">
+                </div>
+                
+                <div>
+                    <label for="unit" data-i18n="unit">Einheit:</label>
+                    <input type="text" name="unit" id="unit" value="{{ default_params['unit'] }}">
+                </div>
+            </div>
+
+            <h3 data-i18n="pdfFonts">PDF-Schriften</h3>
+            <div>
+                <label for="pdf_sans_family" data-i18n="pdfSansFamily">PDF Sans-Schriftfamilie:</label>
+                <input type="text" name="pdf_sans_family" id="pdf_sans_family" value="{{ default_params['pdf_sans_family'] }}">
+            </div>
+            
+            <div>
+                <label for="pdf_serif_family" data-i18n="pdfSerifFamily">PDF Serif-Schriftfamilie:</label>
+                <input type="text" name="pdf_serif_family" id="pdf_serif_family" value="{{ default_params['pdf_serif_family'] }}">
+            </div>
+            
+            <div>
+                <label for="pdf_mono_family" data-i18n="pdfMonoFamily">PDF Monospace-Schriftfamilie:</label>
+                <input type="text" name="pdf_mono_family" id="pdf_mono_family" value="{{ default_params['pdf_mono_family'] }}">
+            </div>
+            
+            <div>
+                <label for="pdf_standard_font" data-i18n="pdfStandardFont">PDF Standardschrift:</label>
+                <input type="text" name="pdf_standard_font" id="pdf_standard_font" value="{{ default_params['pdf_standard_font'] }}">
+            </div>
+
+            <h3 data-i18n="pdfMargins">PDF-Ränder</h3>
+            <div class="grid">
+                <div>
+                    <label for="pdf_page_margin_left" data-i18n="leftMargin">Linker Rand:</label>
+                    <input type="text" name="pdf_page_margin_left" id="pdf_page_margin_left" value="{{ default_params['pdf_page_margin_left'] }}">
+                </div>
+                
+                <div>
+                    <label for="pdf_page_margin_right" data-i18n="rightMargin">Rechter Rand:</label>
+                    <input type="text" name="pdf_page_margin_right" id="pdf_page_margin_right" value="{{ default_params['pdf_page_margin_right'] }}">
+                </div>
+                
+                <div>
+                    <label for="pdf_page_margin_top" data-i18n="topMargin">Oberer Rand:</label>
+                    <input type="text" name="pdf_page_margin_top" id="pdf_page_margin_top" value="{{ default_params['pdf_page_margin_top'] }}">
+                </div>
+                
+                <div>
+                    <label for="pdf_page_margin_bottom" data-i18n="bottomMargin">Unterer Rand:</label>
+                    <input type="text" name="pdf_page_margin_bottom" id="pdf_page_margin_bottom" value="{{ default_params['pdf_page_margin_bottom'] }}">
+                </div>
+            </div>
+
+            <h3 data-i18n="otherSettings">Weitere Einstellungen</h3>
+            <div class="checkbox-container">
+                <input type="checkbox" name="preserve_cover_aspect_ratio" id="preserve_cover_aspect_ratio" {% if default_params['preserve_cover_aspect_ratio'] %}checked{% endif %}>
+                <label for="preserve_cover_aspect_ratio" data-i18n="preserveCoverAspectRatio">Seitenverhältnis des Covers beibehalten</label>
+            </div>
+            
+            <div>
+                <label for="change_justification" data-i18n="justification">Ausrichtung:</label>
+                <input type="text" name="change_justification" id="change_justification" value="{{ default_params['change_justification'] }}">
+            </div>
+        </div>
+
+        <button type="submit" data-i18n="convertToPDF">Zu PDF konvertieren</button>
+    </form>
+
+    <script>
+        const translations = {
+            de: {
+                title: "eBook to PDF Converter",
+                deviceSelection: "Geräteauswahl",
+                selectDeviceProfile: "Wähle Geräteprofil:",
+                remarkablePro: "reMarkable Paper Pro",
+                booxAir4c: "Boox Air 4c",
+                userDefined: "Benutzerdefiniert",
+                uploadFile: "Datei hochladen",
+                selectEpubFile: "EPUB-Datei auswählen:",
+                conversionParameters: "Konvertierungsparameter",
+                inputProfile: "Eingabeprofil:",
+                outputProfile: "Ausgabeprofil:",
+                fontSizes: "Schriftgrößen",
+                baseFontSize: "Basis-Schriftgröße:",
+                defaultFontSize: "Standard-Schriftgröße:",
+                monoFontSize: "Monospace-Schriftgröße:",
+                fontOptions: "Schriftoptionen",
+                embedAllFonts: "Alle Schriften einbetten",
+                subsetEmbeddedFonts: "Eingebettete Schriften beschränken",
+                unsmartenPunctuation: "Anführungszeichen vereinfachen",
+                sizeLayout: "Größe & Layout",
+                customSize: "Benutzerdefinierte Größe:",
+                unit: "Einheit:",
+                pdfFonts: "PDF-Schriften",
+                pdfSansFamily: "PDF Sans-Schriftfamilie:",
+                pdfSerifFamily: "PDF Serif-Schriftfamilie:",
+                pdfMonoFamily: "PDF Monospace-Schriftfamilie:",
+                pdfStandardFont: "PDF Standardschrift:",
+                pdfMargins: "PDF-Ränder",
+                leftMargin: "Linker Rand:",
+                rightMargin: "Rechter Rand:",
+                topMargin: "Oberer Rand:",
+                bottomMargin: "Unterer Rand:",
+                otherSettings: "Weitere Einstellungen",
+                preserveCoverAspectRatio: "Seitenverhältnis des Covers beibehalten",
+                justification: "Ausrichtung:",
+                convertToPDF: "Zu PDF konvertieren",
+                selectFile: "Durchsuchen...",
+                noFileSelected: "Keine Datei ausgewählt"
+            },
+            en: {
+                title: "eBook to PDF Converter",
+                deviceSelection: "Device Selection",
+                selectDeviceProfile: "Select Device Profile:",
+                remarkablePro: "reMarkable Paper Pro",
+                booxAir4c: "Boox Air 4c",
+                userDefined: "User Defined",
+                uploadFile: "Upload File",
+                selectEpubFile: "Select EPUB File:",
+                conversionParameters: "Conversion Parameters",
+                inputProfile: "Input Profile:",
+                outputProfile: "Output Profile:",
+                fontSizes: "Font Sizes",
+                baseFontSize: "Base Font Size:",
+                defaultFontSize: "Default Font Size:",
+                monoFontSize: "Monospace Font Size:",
+                fontOptions: "Font Options",
+                embedAllFonts: "Embed All Fonts",
+                subsetEmbeddedFonts: "Subset Embedded Fonts",
+                unsmartenPunctuation: "Simplify Punctuation",
+                sizeLayout: "Size & Layout",
+                customSize: "Custom Size:",
+                unit: "Unit:",
+                pdfFonts: "PDF Fonts",
+                pdfSansFamily: "PDF Sans Family:",
+                pdfSerifFamily: "PDF Serif Family:",
+                pdfMonoFamily: "PDF Monospace Family:",
+                pdfStandardFont: "PDF Standard Font:",
+                pdfMargins: "PDF Margins",
+                leftMargin: "Left Margin:",
+                rightMargin: "Right Margin:",
+                topMargin: "Top Margin:",
+                bottomMargin: "Bottom Margin:",
+                otherSettings: "Other Settings",
+                preserveCoverAspectRatio: "Preserve Cover Aspect Ratio",
+                justification: "Justification:",
+                convertToPDF: "Convert to PDF",
+                selectFile: "Browse...",
+                noFileSelected: "No file selected"
+            }
+        };
+        
+        let currentLanguage = 'de';
+        
+        function updateLanguage(lang) {
+            currentLanguage = lang;
+            
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = translations[lang][key];
+                    } else if (element.tagName === 'OPTION') {
+                        element.text = translations[lang][key];
+                    } else {
+                        element.textContent = translations[lang][key];
+                    }
+                }
+            });
+            
+            document.querySelectorAll('.language-btn').forEach(button => {
+                if (button.getAttribute('data-lang') === lang) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+            
+            localStorage.setItem('preferredLanguage', lang);
+            
+            document.documentElement.lang = lang;
+        }
+        
+        document.querySelectorAll('.language-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                updateLanguage(this.getAttribute('data-lang'));
+            });
+        });
+        
+        const savedLanguage = localStorage.getItem('preferredLanguage');
+        if (savedLanguage) {
+            updateLanguage(savedLanguage);
+        }
+        
+        function toggleParams() {
+            const profile = document.getElementById('device_profile').value;
+            document.getElementById('parameters').style.display = (profile === 'user_defined') ? 'block' : 'none';
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleParams();
+            updateFileInputText();
+        });
+    </script>
+</body>
+</html>
