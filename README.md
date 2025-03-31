@@ -257,4 +257,3 @@ if status_response.json()['status'] == 'completed':
 | 400 | Bad Request (missing file or invalid parameters) |
 | 404 | Not Found (job ID not found) |
 | 500 | Server Error |
->>>>>>> 70e1525 (Adding REST API)
