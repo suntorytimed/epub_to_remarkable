@@ -158,14 +158,12 @@
                 <label for="change_justification" data-i18n="justification">Ausrichtung:</label>
                 <input type="text" name="change_justification" id="change_justification" value="{{ default_params['change_justification'] }}">
             </div>
+            <button type="submit" data-i18n="convertToPDF">Zu PDF konvertieren</button>
+            <div class="disclaimer-notice">
+                <p data-i18n="byUsingService">Durch die Nutzung dieses Dienstes akzeptieren Sie unsere <a href="/disclaimer" data-i18n="legalTerms">rechtlichen Hinweise</a>.</p>
+            </div>
         </div>
-
-        <button type="submit" data-i18n="convertToPDF">Zu PDF konvertieren</button>
     </form>
-
-    <div class="disclaimer-notice">
-        <p data-i18n="byUsingService">Durch die Nutzung dieses Dienstes akzeptieren Sie unsere <a href="/disclaimer" data-i18n="legalTerms">rechtlichen Hinweise</a>.</p>
-    </div>
 
     <script>
         const translations = {
@@ -265,6 +263,8 @@
                         element.placeholder = translations[lang][key];
                     } else if (element.tagName === 'OPTION') {
                         element.text = translations[lang][key];
+                    } else if (element.tagName === 'A') {
+                        element.textContent = translations[lang][key];
                     } else {
                         element.textContent = translations[lang][key];
                     }

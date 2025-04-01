@@ -98,7 +98,7 @@
         </div>
         
         <div class="disclaimer-notice">
-            <p><a href="/disclaimer" data-i18n="legalTerms">Rechtliche Hinweise</a></p>
+            <p data-i18n="byUsingService">Durch die Nutzung dieses Dienstes akzeptieren Sie unsere <a href="/disclaimer" data-i18n="legalTerms">rechtlichen Hinweise</a>.</p>
         </div>
     </div>
 
@@ -153,7 +153,8 @@
                 attention: "Attention",
                 statusInconsistency: "The status display is inconsistent. Please click on \"Reconnect\" to check the actual status.",
                 jobNotFoundError: "The conversion job was not found. This can happen if:\n- The page was reloaded\n- The server was restarted\n- The job has already completed or expired\n\nPlease try again with a new conversion.",
-                legalTerms: "Legal Terms"
+                legalTerms: "legal terms",
+                byUsingService: "By using this service, you accept our"
             }
         };
         
@@ -167,6 +168,8 @@
                 if (translations[lang][key]) {
                     if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
                         element.placeholder = translations[lang][key];
+                    } else if (element.tagName === 'A') {
+                        element.textContent = translations[lang][key];
                     } else {
                         element.textContent = translations[lang][key];
                     }
