@@ -965,8 +965,8 @@ def disclaimer():
         Response: Rendered disclaimer template with timeout information
     """
     app.logger.info("Disclaimer page requested")
-    # Convert JOB_TIMEOUT from seconds to minutes and round up
-    timeout_minutes = (JOB_TIMEOUT + 59) // 60  # Round up to next minute
+
+    timeout_minutes = (JOB_TIMEOUT + 59) // 60
     return render_template("disclaimer.html", timeout_minutes=timeout_minutes)
 
 @app.route("/api/v1/device_profiles", methods=["GET"])
