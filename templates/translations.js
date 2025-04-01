@@ -214,6 +214,14 @@ const i18n = {
         return translations[lang] && translations[lang][key] ? 
                translations[lang][key] : key;
     },
+
+    replacePlaceholders: function(text) {
+        if (typeof window.timeoutMinutes !== 'undefined') {
+            text = text.replace(/\{\{\s*timeout_minutes\s*\}\}/g, window.timeoutMinutes);
+        }
+
+        return text;
+    },
     
     updatePageContent: function() {
         const lang = this.getCurrentLanguage();
@@ -221,14 +229,17 @@ const i18n = {
         document.querySelectorAll('[data-i18n]').forEach(element => {
             const key = element.getAttribute('data-i18n');
             if (translations[lang] && translations[lang][key]) {
+		        let text = translations[lang][key];
+
+                text = this.replacePlaceholders(text);
                 if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
                     if (element.type !== 'checkbox' && element.type !== 'radio') {
-                        element.placeholder = translations[lang][key];
+                        element.placeholder = text;
                     }
                 } else if (element.tagName === 'OPTION') {
-                    element.text = translations[lang][key];
+                    element.text = text;
                 } else {
-                    element.textContent = translations[lang][key];
+                    element.textContent = text;
                 }
             }
         });
