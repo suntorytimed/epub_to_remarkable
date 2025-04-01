@@ -121,7 +121,7 @@
             
             if (reconnectAttempt > 1) {
                 document.getElementById('status-message').textContent = 
-                    `${i18n.translate('connectionLost')} (${i18n.translate('statusSearching')}...)`;
+                    `${i18n.translate('connectionLost')} (${i18n.translate('statusReconnecting')}...)`;
             }
             
             eventSource = new EventSource(`/progress/${jobId}`);
@@ -207,7 +207,7 @@
         function manualReconnect() {
             const statusText = document.getElementById('status-text');
             const statusMessage = document.getElementById('status-message');
-            statusText.textContent = i18n.translate('statusSearching');
+            statusText.textContent = i18n.translate('statusReconnecting');
             statusMessage.textContent = i18n.translate('reconnecting');
             
             reconnectAttempt = 0;

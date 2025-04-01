@@ -53,20 +53,8 @@
 
     <script src="/static/translations.js"></script>
     <script>
-        var timeoutMinutes = {{ timeout_minutes }};
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            var elements = document.querySelectorAll('[data-i18n="dataStorageText"]');
-            elements.forEach(function(element) {
-                var key = element.getAttribute('data-i18n');
-                var lang = i18n.getCurrentLanguage();
-                if (translations[lang] && translations[lang][key]) {
-                    var text = translations[lang][key];
-                    text = text.replace('{{ timeout_minutes }}', timeoutMinutes);
-                    element.textContent = text;
-                }
-            });
-        });
+        window.timeoutMinutes = {{ timeout_minutes }};
     </script>
+    <script src="/static/translations.js"></script>
 </body>
 </html>
