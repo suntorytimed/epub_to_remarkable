@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, render_template, request, send_file, Response
+from flask_caching import Cache
 import subprocess
 import tempfile
 import os
@@ -8,7 +9,8 @@ import threading
 import time
 import json
 import logging
-import pickle
+import hashlib
+from functools import lru_cache
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -22,6 +24,8 @@ app = Flask(__name__,
             static_folder='templates',
             static_url_path='/static')
 
+cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})
+
 DEBUG_MODE = os.environ.get('DEBUG_MODE', 'false').lower() in ['true', '1', 'yes', 'y']
 app.debug = DEBUG_MODE
 app.logger.setLevel(logging.DEBUG if DEBUG_MODE else logging.INFO)
@@ -34,50 +38,188 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 app.logger.info(f"Using temporary directory: {TEMP_DIR}")
 app.logger.info(f"Job cleanup timeout: {JOB_TIMEOUT}s")
 
-JOB_DATA_FILE = os.path.join(TEMP_DIR, 'conversion_jobs.pkl')
+JOB_DATA_FILE = os.path.join(TEMP_DIR, 'conversion_jobs.json')
 
 conversion_progress = {}
 completed_files = {}
 
-COMPLETED_FILES_FILE = os.path.join(TEMP_DIR, 'completed_files.pkl')
+COMPLETED_FILES_FILE = os.path.join(TEMP_DIR, 'completed_files.json')
 
 os.makedirs(os.path.dirname(COMPLETED_FILES_FILE), exist_ok=True)
 
 def load_saved_jobs():
+    """
+    Load previously saved conversion jobs from disk.
+    
+    Returns:
+        dict: Dictionary of saved jobs or empty dict if none found
+    """
     if os.path.exists(JOB_DATA_FILE):
         try:
-            with open(JOB_DATA_FILE, 'rb') as f:
-                return pickle.load(f)
+            with open(JOB_DATA_FILE, 'r') as f:
+                return json.load(f)
         except Exception as e:
             app.logger.error(f"Error loading saved jobs: {str(e)}")
     return {}
 
+@lru_cache(maxsize=32)
+def get_job_cache_key():
+    """
+    Generate a cache key based on the current job state to prevent excessive writes.
+    
+    Returns:
+        str: MD5 hash of the jobs state
+    """
+    return hashlib.md5(json.dumps(conversion_progress, sort_keys=True).encode()).hexdigest()
+
 def save_jobs():
+    """
+    Save current conversion jobs to disk if state has changed.
+    Only writes to disk when necessary to reduce I/O.
+    """
+    current_key = get_job_cache_key.cache_info().currsize
+    if current_key > 0:
+        return
+        
     try:
-        with open(JOB_DATA_FILE, 'wb') as f:
-            pickle.dump(conversion_progress, f)
+        with open(JOB_DATA_FILE, 'w') as f:
+            json.dump(conversion_progress, f)
+        get_job_cache_key()
     except Exception as e:
         app.logger.error(f"Error saving jobs: {str(e)}")
 
 def load_completed_files():
+    """
+    Load previously saved completed files from disk.
+    
+    Returns:
+        dict: Dictionary of completed files or empty dict if none found
+    """
     if os.path.exists(COMPLETED_FILES_FILE):
         try:
-            with open(COMPLETED_FILES_FILE, 'rb') as f:
-                return pickle.load(f)
+            with open(COMPLETED_FILES_FILE, 'r') as f:
+                return json.load(f)
         except Exception as e:
             app.logger.error(f"Error loading completed files: {str(e)}")
     return {}
+    
+
+def get_epub_metadata(input_path):
+    """
+    Extract author and title from epub file for better naming.
+    
+    Args:
+        input_path (str): Path to the EPUB file
+        
+    Returns:
+        tuple: (author, title) strings formatted for filename use
+    """
+    try:
+        metadata = subprocess.check_output(
+            ["ebook-meta", input_path],
+            text=True, stderr=subprocess.STDOUT
+        ).strip()
+        
+        author = "unknown"
+        title = "ebook"
+        
+        for line in metadata.split('\n'):
+            if line.startswith('Title'):
+                title = line.split(':', 1)[1].strip()
+            elif line.startswith('Author(s)'):
+                author = line.split(':', 1)[1].strip()
+                if ',' in author:
+                    author = author.split(',')[0].strip()
+                if '(' in author:
+                    author = author.split('(')[0].strip()
+                    
+        author = re.sub(r'[^\w\s-]', '', author).strip().replace(' ', '_').lower()
+        title = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_').lower()
+        
+        return author, title
+    except Exception as e:
+        app.logger.error(f"Error extracting metadata: {str(e)}")
+        return "unknown", "ebook"
+
+def build_conversion_command(input_path, output_path, params):
+    """
+    Build the command for ebook conversion with the given parameters.
+    
+    Args:
+        input_path (str): Path to input EPUB file
+        output_path (str): Path for output PDF file
+        params (dict): Conversion parameters
+        
+    Returns:
+        list: Command list for subprocess execution
+    """
+    command = [
+        "ebook-convert",
+        input_path,
+        output_path,
+        "--verbose",
+        "--debug",
+        f"--input-profile={params['input_profile']}",
+        f"--output-profile={params['output_profile']}",
+        f"--base-font-size={params['base_font_size']}",
+        f"--pdf-default-font-size={params['default_font_size']}",
+        f"--pdf-mono-font-size={params['mono_font_size']}",
+        f"--custom-size={params['custom_size']}",
+        f"--unit={params['unit']}",
+        f"--pdf-sans-family={params['pdf_sans_family']}",
+        f"--pdf-serif-family={params['pdf_serif_family']}",
+        f"--pdf-mono-family={params['pdf_mono_family']}",
+        f"--pdf-standard-font={params['pdf_standard_font']}",
+        f"--pdf-page-margin-left={params['pdf_page_margin_left']}",
+        f"--pdf-page-margin-right={params['pdf_page_margin_right']}",
+        f"--pdf-page-margin-top={params['pdf_page_margin_top']}",
+        f"--pdf-page-margin-bottom={params['pdf_page_margin_bottom']}",
+        f"--change-justification={params['change_justification']}"
+    ]
+
+    if params.get("embed_all_fonts", False):
+        command.append("--embed-all-fonts")
+    if params.get("subset_embedded_fonts", False):
+        command.append("--subset-embedded-fonts")
+    if params.get("unsmarten_punctuation", False):
+        command.append("--unsmarten-punctuation")
+    if params.get("preserve_cover_aspect_ratio", False):
+        command.append("--preserve-cover-aspect-ratio")
+        
+    return command
+
+@lru_cache(maxsize=32)
+def get_completed_files_cache_key():
+    """
+    Generate a cache key based on the completed files state to prevent excessive writes.
+    
+    Returns:
+        str: MD5 hash of the completed files state
+    """
+    return hashlib.md5(json.dumps(completed_files, sort_keys=True).encode()).hexdigest()
 
 def save_completed_files():
+    """
+    Save current completed files to disk if state has changed.
+    Only writes to disk when necessary to reduce I/O.
+    """
+    current_key = get_completed_files_cache_key.cache_info().currsize
+    if current_key > 0:
+        return
+        
     try:
-        with open(COMPLETED_FILES_FILE, 'wb') as f:
-            pickle.dump(completed_files, f)
-
+        with open(COMPLETED_FILES_FILE, 'w') as f:
+            json.dump(completed_files, f)
+        get_completed_files_cache_key()
         app.logger.debug(f"Saved {len(completed_files)} entries to {COMPLETED_FILES_FILE}")
     except Exception as e:
         app.logger.error(f"Error saving completed files: {str(e)}")
 
 def job_cleaner():
+    """
+    Background thread function that cleans up completed/failed jobs after timeout.
+    Removes temporary files and job records to free up disk space.
+    """
     while True:
         try:
             current_time = time.time()
@@ -124,6 +266,16 @@ cleaner_thread.start()
 app.logger.info("Started job cleaner thread")
 
 def get_env_params(prefix, defaults):
+    """
+    Load parameters from environment variables with fallback to defaults.
+    
+    Args:
+        prefix (str): Environment variable prefix
+        defaults (dict): Default values for parameters
+        
+    Returns:
+        dict: Parameters with values from environment or defaults
+    """
     params = {}
     for key, default_value in defaults.items():
         env_key = f"{prefix}_{key.upper()}"
@@ -185,23 +337,80 @@ BOOX_AIR_4C_DEFAULT = {
 
 BOOX_AIR_4C_PARAMS = get_env_params("BOOX_AIR_4C", BOOX_AIR_4C_DEFAULT)
 
+@cache.memoize(timeout=60)
+def get_calibre_version():
+    """
+    Get and cache Calibre version to avoid repeated calls.
+    
+    Returns:
+        str: Calibre version string or "Unknown" on error
+    """
+    try:
+        return subprocess.check_output(["ebook-convert", "--version"], 
+                                    text=True, stderr=subprocess.STDOUT).strip()
+    except Exception as e:
+        app.logger.error(f"Error checking Calibre version: {str(e)}")
+        return "Unknown"
+
+def update_job_status(job_id, status=None, progress=None, message=None, error_details=None, completed_time=None):
+    """
+    Update job status with the given parameters.
+    Only updates fields that are provided and only saves on significant status changes.
+    
+    Args:
+        job_id (str): ID of the job to update
+        status (str, optional): New job status
+        progress (int, optional): Progress percentage (0-100)
+        message (str, optional): Status message
+        error_details (str, optional): Error information
+        completed_time (float, optional): Timestamp of job completion
+    """
+    if job_id not in conversion_progress:
+        return
+        
+    if status is not None:
+        conversion_progress[job_id]['status'] = status
+    if progress is not None:
+        conversion_progress[job_id]['progress'] = progress
+    if message is not None:
+        conversion_progress[job_id]['message'] = message
+    if error_details is not None:
+        conversion_progress[job_id]['error_details'] = error_details
+    if completed_time is not None:
+        conversion_progress[job_id]['completed_time'] = completed_time
+    
+    if status in ['completed', 'failed', 'running'] or progress == 100:
+        save_jobs()
+
 def run_conversion(command, job_id, input_path, output_path):
+    """
+    Run the conversion process for an EPUB file.
+    Executes the conversion command, tracks progress, and updates job status.
+    
+    Args:
+        command (list): Command to execute
+        job_id (str): Job identifier
+        input_path (str): Path to input EPUB file
+        output_path (str): Path for output PDF file
+    """
     try:
         app.logger.info(f"Starting conversion job {job_id}")
         app.logger.debug(f"Command: {' '.join(command)}")
         app.logger.debug(f"Input path: {input_path}")
         app.logger.debug(f"Output path: {output_path}")
         
-        app.logger.debug(f"Input file exists: {os.path.exists(input_path)}")
-        app.logger.debug(f"Input file permissions: {oct(os.stat(input_path).st_mode)}")
-        app.logger.debug(f"Input file size: {os.path.getsize(input_path)}")
+        if not os.path.exists(input_path):
+            raise FileNotFoundError(f"Input file {input_path} does not exist")
         
-        try:
-            calibre_version = subprocess.check_output(["ebook-convert", "--version"], 
-                                                   text=True, stderr=subprocess.STDOUT)
-            app.logger.debug(f"Calibre version: {calibre_version}")
-        except Exception as e:
-            app.logger.error(f"Error checking Calibre version: {str(e)}")
+        file_size = os.path.getsize(input_path)
+        app.logger.debug(f"Input file size: {file_size}")
+        if file_size == 0:
+            raise ValueError("Input file is empty")
+            
+        calibre_version = get_calibre_version()
+        app.logger.debug(f"Calibre version: {calibre_version}")
+        
+        author, title = get_epub_metadata(input_path)
         
         conversion_progress[job_id] = {
             'status': 'running', 
@@ -209,11 +418,12 @@ def run_conversion(command, job_id, input_path, output_path):
             'message': 'Running conversion...',
             'input_path': input_path,
             'output_path': output_path,
-            'detailed_logs': []
+            'detailed_logs': [],
+            'author': author,
+            'title': title
         }
         save_jobs()
         
-        app.logger.debug("Starting subprocess...")
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
@@ -224,25 +434,31 @@ def run_conversion(command, job_id, input_path, output_path):
         )
         
         progress_pattern = re.compile(r'(\d+)%')
-        
         full_output = []
+        last_save_time = time.time()
+        batch_size = 10
+        lines_since_save = 0
+        save_interval = 2.0
         
-        app.logger.debug("Reading process output...")
         for line in iter(process.stdout.readline, ''):
             line = line.strip()
             app.logger.debug(f"Process output: {line}")
             full_output.append(line)
             conversion_progress[job_id]['detailed_logs'].append(line)
+            lines_since_save += 1
             
             match = progress_pattern.search(line)
             if match:
                 progress = int(match.group(1))
-                conversion_progress[job_id]['progress'] = progress
-                conversion_progress[job_id]['message'] = line
+                update_job_status(job_id, progress=progress, message=line)
             else:
                 conversion_progress[job_id]['message'] = line
             
-            save_jobs()
+            current_time = time.time()
+            if lines_since_save >= batch_size and current_time - last_save_time >= save_interval:
+                save_jobs()
+                last_save_time = current_time
+                lines_since_save = 0
         
         app.logger.debug("Waiting for process to complete...")
         process.wait()
@@ -251,32 +467,50 @@ def run_conversion(command, job_id, input_path, output_path):
         
         if returncode == 0:
             app.logger.info(f"Conversion job {job_id} completed successfully")
-            conversion_progress[job_id]['status'] = 'completed'
-            conversion_progress[job_id]['progress'] = 100
-            conversion_progress[job_id]['message'] = 'Conversion completed successfully!'
-            conversion_progress[job_id]['completed_time'] = time.time()
             
-            if os.path.exists(output_path):
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
                 app.logger.debug(f"Output file exists: {os.path.exists(output_path)}")
                 app.logger.debug(f"Output file size: {os.path.getsize(output_path)}")
                 
-                completed_files[job_id] = output_path
+                if 'author' in conversion_progress[job_id] and 'title' in conversion_progress[job_id]:
+                    author = conversion_progress[job_id]['author']
+                    title = conversion_progress[job_id]['title']
+                    completed_files[job_id] = {
+                        'path': output_path,
+                        'author': author,
+                        'title': title
+                    }
+                else:
+                    completed_files[job_id] = {'path': output_path}
                 save_completed_files()
-                app.logger.debug(f"Added job {job_id} to completed_files dictionary (now has {len(completed_files)} entries)")
+                
+                update_job_status(
+                    job_id, 
+                    status='completed',
+                    progress=100,
+                    message='Conversion completed successfully!',
+                    completed_time=time.time()
+                )
             else:
                 app.logger.error(f"Output file does not exist despite successful return code!")
-                conversion_progress[job_id]['status'] = 'failed'
-                conversion_progress[job_id]['message'] = 'Conversion failed: Output file not created!'
+                update_job_status(
+                    job_id,
+                    status='failed',
+                    message='Conversion failed: Output file not created!',
+                    completed_time=time.time()
+                )
         else:
             app.logger.error(f"Conversion job {job_id} failed with return code {returncode}")
-            conversion_progress[job_id]['status'] = 'failed'
-            conversion_progress[job_id]['message'] = f'Conversion failed with code {returncode}! Check logs for details.'
-            conversion_progress[job_id]['completed_time'] = time.time()
-
             error_details = '\n'.join(full_output[-10:]) if full_output else "No output captured"
-            conversion_progress[job_id]['error_details'] = error_details
-            
             app.logger.error(f"Error details: {'\n'.join(full_output)}")
+            
+            update_job_status(
+                job_id,
+                status='failed',
+                message=f'Conversion failed with code {returncode}! Check logs for details.',
+                error_details=error_details,
+                completed_time=time.time()
+            )
         
         save_jobs()
     
@@ -286,15 +520,25 @@ def run_conversion(command, job_id, input_path, output_path):
         import traceback
         app.logger.error(traceback.format_exc())
         
-        conversion_progress[job_id]['status'] = 'failed'
-        conversion_progress[job_id]['message'] = error_msg
-        conversion_progress[job_id]['error_details'] = error_msg
-        conversion_progress[job_id]['completed_time'] = time.time()
+        update_job_status(
+            job_id,
+            status='failed',
+            message=error_msg,
+            error_details=error_msg,
+            completed_time=time.time()
+        )
         
         save_jobs()
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    """
+    Main route for the web interface.
+    Handles both GET (display form) and POST (process upload) requests.
+    
+    Returns:
+        Response: Rendered template or redirect
+    """
     if request.method == "POST":
         app.logger.info("POST request received")
         
@@ -306,6 +550,14 @@ def index():
         if not epub_file or epub_file.filename == "":
             app.logger.error("No file selected")
             return "No file selected", 400
+            
+        if not epub_file.filename.lower().endswith('.epub'):
+            app.logger.error(f"Invalid file extension: {epub_file.filename}")
+            return "Only EPUB files are supported", 400
+            
+        if request.content_length > 100 * 1024 * 1024:
+            app.logger.error(f"File too large: {request.content_length / (1024*1024):.2f}MB")
+            return "File size exceeds the 100MB limit", 400
         
         app.logger.info(f"File uploaded: {epub_file.filename}")
         
@@ -357,54 +609,23 @@ def index():
                 
                 app.logger.debug(f"Parameters: {params}")
 
-            command = [
-                "ebook-convert",
-                input_path,
-                output_path,
-                "--verbose",
-                "--debug",
-                f"--input-profile={params['input_profile']}",
-                f"--output-profile={params['output_profile']}",
-                f"--base-font-size={params['base_font_size']}",
-                f"--pdf-default-font-size={params['default_font_size']}",
-                f"--pdf-mono-font-size={params['mono_font_size']}",
-                f"--custom-size={params['custom_size']}",
-                f"--unit={params['unit']}",
-                f"--pdf-sans-family={params['pdf_sans_family']}",
-                f"--pdf-serif-family={params['pdf_serif_family']}",
-                f"--pdf-mono-family={params['pdf_mono_family']}",
-                f"--pdf-standard-font={params['pdf_standard_font']}",
-                f"--pdf-page-margin-left={params['pdf_page_margin_left']}",
-                f"--pdf-page-margin-right={params['pdf_page_margin_right']}",
-                f"--pdf-page-margin-top={params['pdf_page_margin_top']}",
-                f"--pdf-page-margin-bottom={params['pdf_page_margin_bottom']}",
-                f"--change-justification={params['change_justification']}"
-            ]
-
-            if params["embed_all_fonts"]:
-                command.append("--embed-all-fonts")
-                app.logger.debug("Added --embed-all-fonts")
-            if params["subset_embedded_fonts"]:
-                command.append("--subset-embedded-fonts")
-                app.logger.debug("Added --subset-embedded-fonts")
-            if params["unsmarten_punctuation"]:
-                command.append("--unsmarten-punctuation")
-                app.logger.debug("Added --unsmarten-punctuation")
-            if params["preserve_cover_aspect_ratio"]:
-                command.append("--preserve-cover-aspect-ratio")
-                app.logger.debug("Added --preserve-cover-aspect-ratio")
+            command = build_conversion_command(input_path, output_path, params)
                 
             app.logger.debug(f"Final command: {' '.join(command)}")
 
             app.logger.info(f"Starting conversion thread for job {job_id}")
 
+            author, title = get_epub_metadata(input_path)
+            
             conversion_progress[job_id] = {
                 'status': 'starting', 
                 'progress': 0, 
                 'message': 'Starting conversion...',
                 'input_path': input_path,
                 'output_path': output_path,
-                'detailed_logs': []
+                'detailed_logs': [],
+                'author': author,
+                'title': title
             }
             save_jobs()
 
@@ -423,6 +644,16 @@ def index():
 
 @app.route("/progress/<job_id>")
 def progress(job_id):
+    """
+    Server-sent events endpoint for progress updates.
+    Streams job status updates to the client.
+    
+    Args:
+        job_id (str): Job identifier
+        
+    Returns:
+        Response: Server-sent events stream
+    """
     app.logger.info(f"SSE connection established for job {job_id}")
 
     def generate():
@@ -454,10 +685,23 @@ def progress(job_id):
                 
             time.sleep(0.5)
     
-    return Response(generate(), mimetype="text/event-stream")
+    response = Response(generate(), mimetype="text/event-stream")
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route("/download/<job_id>")
 def download(job_id):
+    """
+    File download endpoint for completed conversions.
+    
+    Args:
+        job_id (str): Job identifier
+        
+    Returns:
+        Response: File download or error message
+    """
     app.logger.info(f"Download requested for job {job_id}")
     
     if job_id in conversion_progress:
@@ -466,17 +710,39 @@ def download(job_id):
             if os.path.exists(output_path):
                 app.logger.info(f"Sending file {output_path} for job {job_id} (from conversion_progress)")
                 try:
-                    return send_file(output_path, as_attachment=True, download_name=f"converted_{job_id[:8]}.pdf")
+                    if 'author' in conversion_progress[job_id] and 'title' in conversion_progress[job_id]:
+                        author = conversion_progress[job_id]['author']
+                        title = conversion_progress[job_id]['title']
+                        filename = f"{author}-{title}.pdf"
+                    else:
+                        filename = f"converted_{job_id[:8]}.pdf"
+                        
+                    response = send_file(output_path, as_attachment=True, download_name=filename)
+                    response.headers['Cache-Control'] = 'public, max-age=86400'
+                    response.headers['ETag'] = hashlib.md5(str(os.path.getmtime(output_path)).encode()).hexdigest()
+                    return response
                 except Exception as e:
                     app.logger.error(f"Error sending file: {str(e)}")
                     return f"Error sending file: {str(e)}", 500
     
     if job_id in completed_files:
-        output_path = completed_files[job_id]
+        file_info = completed_files[job_id]
+        output_path = file_info['path'] if isinstance(file_info, dict) else file_info
+        
         if os.path.exists(output_path):
             app.logger.info(f"Sending file {output_path} for job {job_id} (from completed_files)")
             try:
-                return send_file(output_path, as_attachment=True, download_name=f"converted_{job_id[:8]}.pdf")
+                if isinstance(file_info, dict) and 'author' in file_info and 'title' in file_info:
+                    author = file_info['author']
+                    title = file_info['title']
+                    filename = f"{author}-{title}.pdf"
+                else:
+                    filename = f"converted_{job_id[:8]}.pdf"
+                    
+                response = send_file(output_path, as_attachment=True, download_name=filename)
+                response.headers['Cache-Control'] = 'public, max-age=86400'
+                response.headers['ETag'] = hashlib.md5(str(os.path.getmtime(output_path)).encode()).hexdigest()
+                return response
             except Exception as e:
                 app.logger.error(f"Error sending file: {str(e)}")
                 return f"Error sending file: {str(e)}", 500
@@ -498,10 +764,13 @@ def download(job_id):
         if newest_pdf:
             app.logger.info(f"Found recent PDF file as fallback: {newest_pdf}")
             
-            completed_files[job_id] = newest_pdf
+            completed_files[job_id] = {'path': newest_pdf}
             save_completed_files()
             
-            return send_file(newest_pdf, as_attachment=True, download_name=f"converted_{job_id[:8]}.pdf")
+            response = send_file(newest_pdf, as_attachment=True, download_name=f"converted_{job_id[:8]}.pdf")
+            response.headers['Cache-Control'] = 'public, max-age=86400'
+            response.headers['ETag'] = hashlib.md5(str(os.path.getmtime(newest_pdf)).encode()).hexdigest()
+            return response
     except Exception as e:
         app.logger.error(f"Error in fallback search: {str(e)}")
     
@@ -509,7 +778,15 @@ def download(job_id):
     return "File not found or job expired", 404
 
 @app.route("/system-info")
+@cache.cached(timeout=60)
 def system_info():
+    """
+    System information endpoint for debugging.
+    Only available in debug mode.
+    
+    Returns:
+        Response: Rendered template with system information or 404
+    """
     app.logger.info("System info requested")
     if not app.debug:
         return "Not Found", 404
@@ -552,15 +829,18 @@ def system_info():
     )
 
 @app.route("/api/v1/health", methods=["GET"])
+@cache.cached(timeout=60)
 def api_health():
+    """
+    API health check endpoint.
+    
+    Returns:
+        Response: JSON with service status information
+    """
     app.logger.info("API health check requested")
     
     try:
-        calibre_version = subprocess.check_output(
-            ["ebook-convert", "--version"], 
-            text=True, 
-            stderr=subprocess.STDOUT
-        ).strip()
+        calibre_version = get_calibre_version()
         calibre_status = "available"
     except Exception as e:
         app.logger.error(f"Calibre not available: {str(e)}")
@@ -577,7 +857,14 @@ def api_health():
     })
 
 @app.route("/api/v1/device_profiles", methods=["GET"])
+@cache.cached(timeout=300)
 def api_device_profiles():
+    """
+    API endpoint for device profiles.
+    
+    Returns:
+        Response: JSON with device profile information
+    """
     app.logger.info("API device profiles requested")
     
     profiles = {
@@ -589,6 +876,12 @@ def api_device_profiles():
 
 @app.route("/api/v1/convert", methods=["POST"])
 def api_convert():
+    """
+    API endpoint for EPUB conversion.
+    
+    Returns:
+        Response: JSON with job information or error
+    """
     app.logger.info("API conversion requested")
     
     if 'epub_file' not in request.files:
@@ -599,6 +892,14 @@ def api_convert():
     if not epub_file or epub_file.filename == "":
         app.logger.error("API: No file selected")
         return jsonify({"error": "No file selected"}), 400
+        
+    if not epub_file.filename.lower().endswith('.epub'):
+        app.logger.error(f"API: Invalid file extension: {epub_file.filename}")
+        return jsonify({"error": "Only EPUB files are supported"}), 400
+        
+    if request.content_length > 100 * 1024 * 1024:
+        app.logger.error(f"API: File too large: {request.content_length / (1024*1024):.2f}MB")
+        return jsonify({"error": "File size exceeds the 100MB limit"}), 400
     
     app.logger.info(f"API: File uploaded: {epub_file.filename}")
     
@@ -636,50 +937,23 @@ def api_convert():
         
         app.logger.debug(f"API: Parameters: {params}")
 
-        command = [
-            "ebook-convert",
-            input_path,
-            output_path,
-            "--verbose",
-            "--debug",
-            f"--input-profile={params['input_profile']}",
-            f"--output-profile={params['output_profile']}",
-            f"--base-font-size={params['base_font_size']}",
-            f"--pdf-default-font-size={params['default_font_size']}",
-            f"--pdf-mono-font-size={params['mono_font_size']}",
-            f"--custom-size={params['custom_size']}",
-            f"--unit={params['unit']}",
-            f"--pdf-sans-family={params['pdf_sans_family']}",
-            f"--pdf-serif-family={params['pdf_serif_family']}",
-            f"--pdf-mono-family={params['pdf_mono_family']}",
-            f"--pdf-standard-font={params['pdf_standard_font']}",
-            f"--pdf-page-margin-left={params['pdf_page_margin_left']}",
-            f"--pdf-page-margin-right={params['pdf_page_margin_right']}",
-            f"--pdf-page-margin-top={params['pdf_page_margin_top']}",
-            f"--pdf-page-margin-bottom={params['pdf_page_margin_bottom']}",
-            f"--change-justification={params['change_justification']}"
-        ]
-
-        if params.get("embed_all_fonts", False):
-            command.append("--embed-all-fonts")
-        if params.get("subset_embedded_fonts", False):
-            command.append("--subset-embedded-fonts")
-        if params.get("unsmarten_punctuation", False):
-            command.append("--unsmarten-punctuation")
-        if params.get("preserve_cover_aspect_ratio", False):
-            command.append("--preserve-cover-aspect-ratio")
+        command = build_conversion_command(input_path, output_path, params)
             
         app.logger.debug(f"API: Final command: {' '.join(command)}")
 
         app.logger.info(f"API: Starting conversion thread for job {job_id}")
 
+        author, title = get_epub_metadata(input_path)
+        
         conversion_progress[job_id] = {
             'status': 'starting', 
             'progress': 0, 
             'message': 'Starting conversion...',
             'input_path': input_path,
             'output_path': output_path,
-            'detailed_logs': []
+            'detailed_logs': [],
+            'author': author,
+            'title': title
         }
         save_jobs()
 
@@ -698,10 +972,19 @@ def api_convert():
             "status": "processing"
         }
         
-        return jsonify(response), 202  # 202 Accepted
+        return jsonify(response), 202
 
 @app.route("/api/v1/jobs/<job_id>/status", methods=["GET"])
 def api_job_status(job_id):
+    """
+    API endpoint for job status.
+    
+    Args:
+        job_id (str): Job identifier
+        
+    Returns:
+        Response: JSON with job status information
+    """
     app.logger.info(f"API: Status requested for job {job_id}")
     
     if job_id in conversion_progress:
@@ -715,18 +998,32 @@ def api_job_status(job_id):
             base_url = request.url_root.rstrip('/')
             job_data['download_url'] = f"{base_url}/api/v1/jobs/{job_id}/download"
             
+            if 'author' in job_data and 'title' in job_data:
+                job_data['filename'] = f"{job_data['author']}-{job_data['title']}.pdf"
+            
         return jsonify(job_data)
     
     elif job_id in completed_files:
-        output_path = completed_files[job_id]
+        file_info = completed_files[job_id]
+        output_path = file_info['path'] if isinstance(file_info, dict) else file_info
+        
         if os.path.exists(output_path):
             base_url = request.url_root.rstrip('/')
-            return jsonify({
+            response_data = {
                 "status": "completed",
                 "progress": 100,
                 "message": "Conversion completed successfully",
                 "download_url": f"{base_url}/api/v1/jobs/{job_id}/download"
-            })
+            }
+            
+            if isinstance(file_info, dict) and 'author' in file_info and 'title' in file_info:
+                author = file_info['author']
+                title = file_info['title']
+                response_data["filename"] = f"{author}-{title}.pdf"
+                response_data["author"] = author
+                response_data["title"] = title
+                
+            return jsonify(response_data)
 
     return jsonify({
         "status": "not_found",
@@ -735,16 +1032,37 @@ def api_job_status(job_id):
 
 @app.route("/api/v1/jobs/<job_id>/download", methods=["GET"])
 def api_job_download(job_id):
+    """
+    API endpoint for file download.
+    
+    Args:
+        job_id (str): Job identifier
+        
+    Returns:
+        Response: File download or error JSON
+    """
     app.logger.info(f"API: Download requested for job {job_id}")
 
     if job_id in completed_files:
-        output_path = completed_files[job_id]
+        file_info = completed_files[job_id]
+        output_path = file_info['path'] if isinstance(file_info, dict) else file_info
+        
         if os.path.exists(output_path):
             app.logger.info(f"API: Sending file {output_path} for job {job_id} (from completed_files)")
             try:
-                return send_file(output_path, as_attachment=True, 
-                                download_name=f"converted_{job_id[:8]}.pdf",
+                if isinstance(file_info, dict) and 'author' in file_info and 'title' in file_info:
+                    author = file_info['author']
+                    title = file_info['title']
+                    filename = f"{author}-{title}.pdf"
+                else:
+                    filename = f"converted_{job_id[:8]}.pdf"
+                
+                response = send_file(output_path, as_attachment=True, 
+                                download_name=filename,
                                 mimetype="application/pdf")
+                response.headers['Cache-Control'] = 'public, max-age=86400'
+                response.headers['ETag'] = hashlib.md5(str(os.path.getmtime(output_path)).encode()).hexdigest()
+                return response
             except Exception as e:
                 app.logger.error(f"API: Error sending file: {str(e)}")
                 return jsonify({"error": f"Error sending file: {str(e)}"}), 500

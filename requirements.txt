@@ -1,2 +1,3 @@
 Flask==3.0.3
 gunicorn
+Flask-Caching==2.1.0
