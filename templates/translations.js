@@ -218,25 +218,23 @@ const i18n = {
     updatePageContent: function() {
         const lang = this.getCurrentLanguage();
         
-        document.querySelectorAll('[data-i18n]:not(p[data-i18n="byUsingService"])')
-        .forEach(element => {
+        document.querySelectorAll('[data-i18n]').forEach(element => {
             const key = element.getAttribute('data-i18n');
-            if (translations[lang][key]) {
+            if (translations[lang] && translations[lang][key]) {
                 if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-                    element.placeholder = translations[lang][key];
+                    if (element.type !== 'checkbox' && element.type !== 'radio') {
+                        element.placeholder = translations[lang][key];
+                    }
                 } else if (element.tagName === 'OPTION') {
                     element.text = translations[lang][key];
-                } else if (element.tagName === 'A') {
-                    element.textContent = translations[lang][key];
                 } else {
                     element.textContent = translations[lang][key];
                 }
             }
         });
         
-        document.querySelectorAll('p[data-i18n="byUsingService"]')
-        .forEach(paragraph => {
-            const linkElement = paragraph.querySelector('a[data-i18n="legalTerms"]');
+        document.querySelectorAll('p[data-i18n="byUsingService"]').forEach(paragraph => {
+            const linkElement = document.querySelector('a[data-i18n="legalTerms"]');
             
             if (linkElement) {
                 const paragraphText = translations[lang]["byUsingService"];
