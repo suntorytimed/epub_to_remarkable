@@ -167,19 +167,25 @@ button:active {
     gap: 8px;
 }
 
-.language-btn {
-    background: none;
+.language-select {
+    background-color: white;
     border: 1px solid var(--border-color);
-    padding: 4px 8px;
+    padding: 6px 10px;
     border-radius: 4px;
     cursor: pointer;
     font-family: 'IBM Plex Sans', sans-serif;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    outline: none;
 }
 
-.language-btn.active {
-    background-color: var(--primary-color);
-    color: white;
+.language-select:hover {
+    border-color: var(--accent-color);
+}
+
+.language-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
 .custom-file-input {

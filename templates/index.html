@@ -9,8 +9,7 @@
 </head>
 <body>
     <div class="language-switcher">
-        <button class="language-btn active" data-lang="de">DE</button>
-        <button class="language-btn" data-lang="en">EN</button>
+        <!-- Will be populated by JavaScript -->
     </div>
 
     <h1 data-i18n="title">eBook to PDF Converter</h1>
@@ -166,147 +165,12 @@
         </div>
     </form>
 
+    <script src="/static/translations.js"></script>
     <script>
-        const translations = {
-            de: {
-                title: "eBook to PDF Converter",
-                deviceSelection: "Geräteauswahl",
-                selectDeviceProfile: "Wähle Geräteprofil:",
-                remarkablePro: "reMarkable Paper Pro",
-                booxAir4c: "Boox Air 4c",
-                userDefined: "Benutzerdefiniert",
-                uploadFile: "Datei hochladen",
-                selectEpubFile: "EPUB-Datei auswählen:",
-                conversionParameters: "Konvertierungsparameter",
-                inputProfile: "Eingabeprofil:",
-                outputProfile: "Ausgabeprofil:",
-                fontSizes: "Schriftgrößen",
-                baseFontSize: "Basis-Schriftgröße:",
-                defaultFontSize: "Standard-Schriftgröße:",
-                monoFontSize: "Monospace-Schriftgröße:",
-                fontOptions: "Schriftoptionen",
-                embedAllFonts: "Alle Schriften einbetten",
-                subsetEmbeddedFonts: "Eingebettete Schriften beschränken",
-                unsmartenPunctuation: "Anführungszeichen vereinfachen",
-                sizeLayout: "Größe & Layout",
-                customSize: "Benutzerdefinierte Größe:",
-                unit: "Einheit:",
-                pdfFonts: "PDF-Schriften",
-                pdfSansFamily: "PDF Sans-Schriftfamilie:",
-                pdfSerifFamily: "PDF Serif-Schriftfamilie:",
-                pdfMonoFamily: "PDF Monospace-Schriftfamilie:",
-                pdfStandardFont: "PDF Standardschrift:",
-                pdfMargins: "PDF-Ränder",
-                leftMargin: "Linker Rand:",
-                rightMargin: "Rechter Rand:",
-                topMargin: "Oberer Rand:",
-                bottomMargin: "Unterer Rand:",
-                otherSettings: "Weitere Einstellungen",
-                preserveCoverAspectRatio: "Seitenverhältnis des Covers beibehalten",
-                justification: "Ausrichtung:",
-                convertToPDF: "Zu PDF konvertieren",
-                selectFile: "Durchsuchen...",
-                noFileSelected: "Keine Datei ausgewählt"
-            },
-            en: {
-                title: "eBook to PDF Converter",
-                deviceSelection: "Device Selection",
-                selectDeviceProfile: "Select Device Profile:",
-                remarkablePro: "reMarkable Paper Pro",
-                booxAir4c: "Boox Air 4c",
-                userDefined: "User Defined",
-                uploadFile: "Upload File",
-                selectEpubFile: "Select EPUB File:",
-                conversionParameters: "Conversion Parameters",
-                inputProfile: "Input Profile:",
-                outputProfile: "Output Profile:",
-                fontSizes: "Font Sizes",
-                baseFontSize: "Base Font Size:",
-                defaultFontSize: "Default Font Size:",
-                monoFontSize: "Monospace Font Size:",
-                fontOptions: "Font Options",
-                embedAllFonts: "Embed All Fonts",
-                subsetEmbeddedFonts: "Subset Embedded Fonts",
-                unsmartenPunctuation: "Simplify Punctuation",
-                sizeLayout: "Size & Layout",
-                customSize: "Custom Size:",
-                unit: "Unit:",
-                pdfFonts: "PDF Fonts",
-                pdfSansFamily: "PDF Sans Family:",
-                pdfSerifFamily: "PDF Serif Family:",
-                pdfMonoFamily: "PDF Monospace Family:",
-                pdfStandardFont: "PDF Standard Font:",
-                pdfMargins: "PDF Margins",
-                leftMargin: "Left Margin:",
-                rightMargin: "Right Margin:",
-                topMargin: "Top Margin:",
-                bottomMargin: "Bottom Margin:",
-                otherSettings: "Other Settings",
-                preserveCoverAspectRatio: "Preserve Cover Aspect Ratio",
-                justification: "Justification:",
-                convertToPDF: "Convert to PDF",
-                selectFile: "Browse...",
-                noFileSelected: "No file selected",
-                byUsingService: "By using this service, you accept our",
-                legalTerms: "legal terms"
-            }
-        };
-        
-        let currentLanguage = 'de';
-        
-        function updateLanguage(lang) {
-            currentLanguage = lang;
-            
-            document.querySelectorAll('[data-i18n]:not(p[data-i18n="byUsingService"])').forEach(element => {
-                const key = element.getAttribute('data-i18n');
-                if (translations[lang][key]) {
-                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-                        element.placeholder = translations[lang][key];
-                    } else if (element.tagName === 'OPTION') {
-                        element.text = translations[lang][key];
-                    } else if (element.tagName === 'A') {
-                        element.textContent = translations[lang][key];
-                    } else {
-                        element.textContent = translations[lang][key];
-                    }
-                }
-            });
-            
-            document.querySelectorAll('p[data-i18n="byUsingService"]').forEach(paragraph => {
-                const linkElement = paragraph.querySelector('a[data-i18n="legalTerms"]');
-                
-                if (linkElement) {
-                    const paragraphText = translations[lang]["byUsingService"];
-                    const linkText = translations[lang]["legalTerms"];
-                    
-                    paragraph.innerHTML = paragraphText + ' <a href="/disclaimer" data-i18n="legalTerms">' + linkText + '</a>.';
-                }
-            });
-            
-            document.querySelectorAll('.language-btn').forEach(button => {
-                if (button.getAttribute('data-lang') === lang) {
-                    button.classList.add('active');
-                } else {
-                    button.classList.remove('active');
-                }
-            });
-            
-            localStorage.setItem('preferredLanguage', lang);
-            
-            document.documentElement.lang = lang;
+        function updateFileInputText() {
+            // Placeholder for file input styling if needed
         }
-        
-        document.querySelectorAll('.language-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                updateLanguage(this.getAttribute('data-lang'));
-            });
-        });
-        
-        const savedLanguage = localStorage.getItem('preferredLanguage');
-        if (savedLanguage) {
-            updateLanguage(savedLanguage);
-        }
-        
+
         function toggleParams() {
             const profile = document.getElementById('device_profile').value;
             document.getElementById('parameters').style.display = (profile === 'user_defined') ? 'block' : 'none';

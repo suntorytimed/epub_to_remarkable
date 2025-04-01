@@ -51,8 +51,7 @@
 </head>
 <body>
     <div class="language-switcher">
-        <button class="language-btn active" data-lang="de">DE</button>
-        <button class="language-btn" data-lang="en">EN</button>
+        <!-- Will be populated by JavaScript -->
     </div>
 
     <h1 data-i18n="title">eBook to PDF Converter</h1>
@@ -102,115 +101,8 @@
         </div>
     </div>
 
+    <script src="/static/translations.js"></script>
     <script>
-        const translations = {
-            de: {
-                title: "eBook to PDF Converter",
-                status: "Status",
-                statusRunning: "Konvertierung läuft...",
-                statusCompleted: "Abgeschlossen",
-                statusFailed: "Fehlgeschlagen",
-                statusLostConnection: "Verbindung verloren",
-                statusSearching: "Suche nach PDF...",
-                statusInProgress: "In Bearbeitung",
-                tooltip: "Wenn der Status nicht korrekt angezeigt wird, kann es sein, dass die Konvertierung trotzdem im Hintergrund läuft. Bitte warten Sie einige Minuten und klicken Sie dann auf \"Verbindung wiederherstellen\".",
-                startingConversion: "Starte Konvertierung...",
-                conversionDetails: "Konvertierungsdetails",
-                errorMessage: "Fehlermeldung",
-                downloadPDF: "PDF herunterladen",
-                backToForm: "Zurück zum Formular",
-                reconnect: "Verbindung wiederherstellen",
-                reconnecting: "Verbindung wird wiederhergestellt...",
-                conversionSuccessful: "Konvertierung erfolgreich abgeschlossen!",
-                conversionInProgress: "Die Konvertierung scheint noch im Gange zu sein oder ist fehlgeschlagen. Bitte versuchen Sie es später erneut.",
-                errorOccurred: "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
-                connectionLost: "Die Server-Verbindung wurde unterbrochen. Die Konvertierung läuft aber möglicherweise noch im Hintergrund. Bitte verwenden Sie den \"Verbindung wiederherstellen\"-Button, um die Verbindung erneut herzustellen.",
-                attention: "Achtung",
-                statusInconsistency: "Die Statusanzeige ist widersprüchlich. Bitte klicken Sie auf \"Verbindung wiederherstellen\", um den tatsächlichen Status zu prüfen.",
-                jobNotFoundError: "Der Konvertierungsauftrag wurde nicht gefunden. Dies kann passieren, wenn:\n- Die Seite neu geladen wurde\n- Der Server neu gestartet wurde\n- Der Auftrag bereits abgeschlossen oder abgelaufen ist\n\nBitte versuchen Sie es erneut mit einer neuen Konvertierung."
-            },
-            en: {
-                title: "eBook to PDF Converter",
-                status: "Status",
-                statusRunning: "Conversion in progress...",
-                statusCompleted: "Completed",
-                statusFailed: "Failed",
-                statusLostConnection: "Connection lost",
-                statusSearching: "Searching for PDF...",
-                statusInProgress: "In progress",
-                tooltip: "If the status is not displayed correctly, the conversion may still be running in the background. Please wait a few minutes and then click \"Reconnect\".",
-                startingConversion: "Starting conversion...",
-                conversionDetails: "Conversion Details",
-                errorMessage: "Error Message",
-                downloadPDF: "Download PDF",
-                backToForm: "Back to Form",
-                reconnect: "Reconnect",
-                reconnecting: "Reconnecting...",
-                conversionSuccessful: "Conversion completed successfully!",
-                conversionInProgress: "The conversion appears to be still in progress or has failed. Please try again later.",
-                errorOccurred: "An error occurred. Please try again later.",
-                connectionLost: "The server connection was interrupted. The conversion may still be running in the background. Please use the \"Reconnect\" button to re-establish the connection.",
-                attention: "Attention",
-                statusInconsistency: "The status display is inconsistent. Please click on \"Reconnect\" to check the actual status.",
-                jobNotFoundError: "The conversion job was not found. This can happen if:\n- The page was reloaded\n- The server was restarted\n- The job has already completed or expired\n\nPlease try again with a new conversion.",
-                legalTerms: "legal terms",
-                byUsingService: "By using this service, you accept our"
-            }
-        };
-        
-        let currentLanguage = 'de';
-        
-        function updateLanguage(lang) {
-            currentLanguage = lang;
-            
-            document.querySelectorAll('[data-i18n]:not(p[data-i18n="byUsingService"])').forEach(element => {
-                const key = element.getAttribute('data-i18n');
-                if (translations[lang][key]) {
-                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-                        element.placeholder = translations[lang][key];
-                    } else if (element.tagName === 'A') {
-                        element.textContent = translations[lang][key];
-                    } else {
-                        element.textContent = translations[lang][key];
-                    }
-                }
-            });
-            
-            document.querySelectorAll('p[data-i18n="byUsingService"]').forEach(paragraph => {
-                const linkElement = paragraph.querySelector('a[data-i18n="legalTerms"]');
-                
-                if (linkElement) {
-                    const paragraphText = translations[lang]["byUsingService"];
-                    const linkText = translations[lang]["legalTerms"];
-                    
-                    paragraph.innerHTML = paragraphText + ' <a href="/disclaimer" data-i18n="legalTerms">' + linkText + '</a>.';
-                }
-            });
-            
-            document.querySelectorAll('.language-btn').forEach(button => {
-                if (button.getAttribute('data-lang') === lang) {
-                    button.classList.add('active');
-                } else {
-                    button.classList.remove('active');
-                }
-            });
-            
-            localStorage.setItem('preferredLanguage', lang);
-            
-            document.documentElement.lang = lang;
-        }
-        
-        document.querySelectorAll('.language-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                updateLanguage(this.getAttribute('data-lang'));
-            });
-        });
-        
-        const savedLanguage = localStorage.getItem('preferredLanguage');
-        if (savedLanguage) {
-            updateLanguage(savedLanguage);
-        }
-        
         const jobId = "{{ job_id }}";
         let messageLog = [];
         let eventSource = null;
@@ -231,7 +123,7 @@
             
             if (reconnectAttempt > 1) {
                 document.getElementById('status-message').textContent = 
-                    `${translations[currentLanguage].connectionLost} (${translations[currentLanguage].statusSearching}...)`;
+                    `${i18n.translate('connectionLost')} (${i18n.translate('statusSearching')}...)`;
             }
             
             eventSource = new EventSource(`/progress/${jobId}`);
@@ -256,7 +148,7 @@
                 const statusDot = document.getElementById('status-dot');
                 
                 if (data.status === 'completed') {
-                    statusText.textContent = translations[currentLanguage].statusCompleted;
+                    statusText.textContent = i18n.translate('statusCompleted');
                     statusDot.classList.remove('failed');
                     statusDot.classList.add('completed');
                     
@@ -271,7 +163,7 @@
                     }
                 } 
                 else if (data.status === 'failed') {
-                    statusText.textContent = translations[currentLanguage].statusFailed;
+                    statusText.textContent = i18n.translate('statusFailed');
                     statusDot.classList.remove('completed');
                     statusDot.classList.add('failed');
                     
@@ -307,8 +199,8 @@
                     }, backoffTime);
                 } else {
                     console.log("Maximum reconnection attempts reached, showing manual reconnect button");
-                    document.getElementById('status-text').textContent = translations[currentLanguage].statusLostConnection;
-                    document.getElementById('status-message').textContent = translations[currentLanguage].connectionLost;
+                    document.getElementById('status-text').textContent = i18n.translate('statusLostConnection');
+                    document.getElementById('status-message').textContent = i18n.translate('connectionLost');
                     document.getElementById('reconnect-btn').classList.remove('hidden');
                 }
             };
@@ -317,8 +209,8 @@
         function manualReconnect() {
             const statusText = document.getElementById('status-text');
             const statusMessage = document.getElementById('status-message');
-            statusText.textContent = translations[currentLanguage].statusSearching;
-            statusMessage.textContent = translations[currentLanguage].reconnecting;
+            statusText.textContent = i18n.translate('statusSearching');
+            statusMessage.textContent = i18n.translate('reconnecting');
             
             reconnectAttempt = 0;
             
@@ -338,14 +230,17 @@
             manualReconnect();
         });
         
-        connectEventSource();
-        
-        if (sessionStorage.getItem('wasConnected_' + jobId) === 'true') {
-            console.log('Detected page reload, forcing reconnection');
-            manualReconnect();
-        }
-        
-        sessionStorage.setItem('wasConnected_' + jobId, 'true');
+        // Initialize translations
+        document.addEventListener('DOMContentLoaded', function() {
+            connectEventSource();
+            
+            if (sessionStorage.getItem('wasConnected_' + jobId) === 'true') {
+                console.log('Detected page reload, forcing reconnection');
+                manualReconnect();
+            }
+            
+            sessionStorage.setItem('wasConnected_' + jobId, 'true');
+        });
     </script>
 </body>
 </html>
