@@ -1,13 +1,9 @@
-// Translations for the application
 const translations = {
     de: {
-        // Common title
         title: "eBook to PDF Converter",
-        // Disclaimer page title
         disclaimerTitle: "Rechtliche Hinweise",
-        // Disclaimer sections
         dataStorageTitle: "Datenspeicherung",
-        dataStorageText: "Alle hochgeladenen Dateien werden nur temporär für den Konvertierungsprozess gespeichert. Nach erfolgreicher Konvertierung bleiben die Dateien für einen begrenzten Zeitraum (maximal 30 Minuten) verfügbar, um den Download zu ermöglichen. Danach werden sie automatisch gelöscht. Wir speichern keine Benutzer- oder Dateimetadaten über diesen Zeitraum hinaus.",
+        dataStorageText: "Alle hochgeladenen Dateien werden nur temporär für den Konvertierungsprozess gespeichert. Nach erfolgreicher Konvertierung bleiben die Dateien für einen begrenzten Zeitraum (maximal {{ timeout_minutes }} Minuten) verfügbar, um den Download zu ermöglichen. Danach werden sie automatisch gelöscht. Wir speichern keine Benutzer- oder Dateimetadaten über diesen Zeitraum hinaus.",
         contentResponsibilityTitle: "Inhaltsverantwortung",
         contentResponsibilityText: "Benutzer sind allein verantwortlich für die Inhalte der hochgeladenen Dateien. Das Hochladen oder Konvertieren von urheberrechtlich geschütztem Material ohne entsprechende Rechte, sowie von illegalen, beleidigenden oder anderweitig rechtswidrigen Inhalten ist strengstens untersagt. Der Betreiber dieses Dienstes behält sich das Recht vor, verdächtige Aktivitäten zu untersuchen und bei Bedarf an die zuständigen Behörden zu melden.",
         liabilityTitle: "Haftungsausschluss",
@@ -17,8 +13,6 @@ const translations = {
         termsOfUseTitle: "Nutzungsbedingungen",
         termsOfUseText: "Durch die Nutzung dieses Dienstes erklären Sie sich mit diesen Bedingungen einverstanden. Bei Verstößen gegen diese Bedingungen kann Ihnen die Nutzung des Dienstes untersagt werden. Sie stimmen zu, den Dienst nicht zu missbrauchen, keine automatisierten Massenanfragen zu stellen und keine Maßnahmen zu ergreifen, die die Funktionsfähigkeit des Dienstes beeinträchtigen könnten.",
         backToConverter: "Zurück zum Konverter",
-        
-        // Main application
         deviceSelection: "Geräteauswahl",
         selectDeviceProfile: "Wähle Geräteprofil:",
         remarkablePro: "reMarkable Paper Pro",
@@ -79,16 +73,32 @@ const translations = {
         connectionLost: "Die Server-Verbindung wurde unterbrochen. Die Konvertierung läuft aber möglicherweise noch im Hintergrund. Bitte verwenden Sie den \"Verbindung wiederherstellen\"-Button, um die Verbindung erneut herzustellen.",
         attention: "Achtung",
         statusInconsistency: "Die Statusanzeige ist widersprüchlich. Bitte klicken Sie auf \"Verbindung wiederherstellen\", um den tatsächlichen Status zu prüfen.",
-        jobNotFoundError: "Der Konvertierungsauftrag wurde nicht gefunden. Dies kann passieren, wenn:\n- Die Seite neu geladen wurde\n- Der Server neu gestartet wurde\n- Der Auftrag bereits abgeschlossen oder abgelaufen ist\n\nBitte versuchen Sie es erneut mit einer neuen Konvertierung."
+        jobNotFoundError: "Der Konvertierungsauftrag wurde nicht gefunden. Dies kann passieren, wenn:\n- Die Seite neu geladen wurde\n- Der Server neu gestartet wurde\n- Der Auftrag bereits abgeschlossen oder abgelaufen ist\n\nBitte versuchen Sie es erneut mit einer neuen Konvertierung.",
+        // System info page translations
+        systemDiagnosis: "System-Diagnose",
+        systemStatus: "Systemstatus",
+        calibre: "Calibre:",
+        ibmPlexFonts: "IBM Plex Schriftarten:",
+        installed: "Installiert",
+        notFound: "Nicht gefunden",
+        tempDirectory: "Temporäres Verzeichnis:",
+        writable: "Schreibbar",
+        notWritable: "Nicht schreibbar",
+        pythonVersion: "Python Version:",
+        activeJobs: "Aktive Jobs:",
+        completedFiles: "Abgeschlossene Dateien:",
+        availableFonts: "Verfügbare Schriftarten",
+        errorRetrievingFonts: "Fehler beim Abrufen der Schriftarten:",
+        noFontsFound: "Keine Schriftarten gefunden",
+        diskSpace: "Speicherplatz",
+        environmentVariables: "Umgebungsvariablen",
+        backToHomepage: "Zurück zur Startseite"
     },
     en: {
-        // Common title
         title: "eBook to PDF Converter",
-        // Disclaimer page title
         disclaimerTitle: "Legal Disclaimer",
-        // Disclaimer sections
         dataStorageTitle: "Data Storage",
-        dataStorageText: "All uploaded files are stored temporarily for the conversion process only. After successful conversion, files remain available for a limited period (maximum 30 minutes) to allow downloading. They are then automatically deleted. We do not store any user or file metadata beyond this period.",
+        dataStorageText: "All uploaded files are stored temporarily for the conversion process only. After successful conversion, files remain available for a limited period (maximum {{ timeout_minutes }} minutes) to allow downloading. They are then automatically deleted. We do not store any user or file metadata beyond this period.",
         contentResponsibilityTitle: "Content Responsibility",
         contentResponsibilityText: "Users are solely responsible for the content of uploaded files. Uploading or converting copyrighted material without appropriate rights, as well as illegal, offensive, or otherwise unlawful content is strictly prohibited. The operator of this service reserves the right to investigate suspicious activities and report them to the appropriate authorities if necessary.",
         liabilityTitle: "Disclaimer of Liability",
@@ -98,8 +108,6 @@ const translations = {
         termsOfUseTitle: "Terms of Use",
         termsOfUseText: "By using this service, you agree to these terms. Violations of these terms may result in your being prohibited from using the service. You agree not to abuse the service, not to make automated mass requests, and not to take any actions that could impair the functionality of the service.",
         backToConverter: "Back to Converter",
-        
-        // Main application
         deviceSelection: "Device Selection",
         selectDeviceProfile: "Select Device Profile:",
         remarkablePro: "reMarkable Paper Pro",
@@ -160,24 +168,39 @@ const translations = {
         connectionLost: "The server connection was interrupted. The conversion may still be running in the background. Please use the \"Reconnect\" button to re-establish the connection.",
         attention: "Attention",
         statusInconsistency: "The status display is inconsistent. Please click on \"Reconnect\" to check the actual status.",
-        jobNotFoundError: "The conversion job was not found. This can happen if:\n- The page was reloaded\n- The server was restarted\n- The job has already completed or expired\n\nPlease try again with a new conversion."
+        jobNotFoundError: "The conversion job was not found. This can happen if:\n- The page was reloaded\n- The server was restarted\n- The job has already completed or expired\n\nPlease try again with a new conversion.",
+        // System info page translations
+        systemDiagnosis: "System Diagnosis",
+        systemStatus: "System Status",
+        calibre: "Calibre:",
+        ibmPlexFonts: "IBM Plex Fonts:",
+        installed: "Installed",
+        notFound: "Not found",
+        tempDirectory: "Temporary Directory:",
+        writable: "Writable",
+        notWritable: "Not writable",
+        pythonVersion: "Python Version:",
+        activeJobs: "Active Jobs:",
+        completedFiles: "Completed Files:",
+        availableFonts: "Available Fonts",
+        errorRetrievingFonts: "Error retrieving fonts:",
+        noFontsFound: "No fonts found",
+        diskSpace: "Disk Space",
+        environmentVariables: "Environment Variables",
+        backToHomepage: "Back to Homepage"
     }
 };
 
-// Available languages
 const availableLanguages = {
     'de': 'Deutsch',
     'en': 'English'
 };
 
-// Translation utility functions
 const i18n = {
-    // Get current language
     getCurrentLanguage: function() {
         return localStorage.getItem('preferredLanguage') || 'de';
     },
     
-    // Set current language
     setLanguage: function(lang) {
         if (translations[lang]) {
             localStorage.setItem('preferredLanguage', lang);
@@ -188,20 +211,17 @@ const i18n = {
         return false;
     },
     
-    // Get translation for a key
     translate: function(key) {
         const lang = this.getCurrentLanguage();
         return translations[lang] && translations[lang][key] ? 
                translations[lang][key] : key;
     },
     
-    // Update all page content using data-i18n attributes
     updatePageContent: function() {
         const lang = this.getCurrentLanguage();
         
-        // Regular elements
-        document.querySelectorAll('[data-i18n]:not(p[data-i18n="byUsingService"])').
-        forEach(element => {
+        document.querySelectorAll('[data-i18n]:not(p[data-i18n="byUsingService"])')
+        .forEach(element => {
             const key = element.getAttribute('data-i18n');
             if (translations[lang][key]) {
                 if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
@@ -216,7 +236,6 @@ const i18n = {
             }
         });
         
-        // Special handling for disclaimer paragraphs with links
         document.querySelectorAll('p[data-i18n="byUsingService"]')
         .forEach(paragraph => {
             const linkElement = paragraph.querySelector('a[data-i18n="legalTerms"]');
@@ -230,23 +249,18 @@ const i18n = {
             }
         });
         
-        // Update language selector
         this.updateLanguageSelector();
     },
     
-    // Create or update language selector
     updateLanguageSelector: function() {
         const container = document.querySelector('.language-switcher');
         if (!container) return;
         
-        // Clear existing buttons
         container.innerHTML = '';
         
-        // Create select dropdown
         const select = document.createElement('select');
         select.className = 'language-select';
         
-        // Add options for each available language
         Object.keys(availableLanguages).forEach(langCode => {
             const option = document.createElement('option');
             option.value = langCode;
@@ -257,7 +271,6 @@ const i18n = {
             select.appendChild(option);
         });
         
-        // Add change event
         select.addEventListener('change', function() {
             i18n.setLanguage(this.value);
         });
@@ -266,7 +279,6 @@ const i18n = {
     }
 };
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     i18n.updatePageContent();
 });

@@ -50,25 +50,23 @@
     </style>
 </head>
 <body>
-    <div class="language-switcher">
-        <!-- Will be populated by JavaScript -->
-    </div>
+    <div class="language-switcher"></div>
 
-    <h1 data-i18n="title">eBook to PDF Converter</h1>
+    <h1 data-i18n="title"></h1>
     <span class="accent-line"></span>
     
     <div class="progress-container section">
         <div class="status-indicator">
             <div id="status-dot" class="status-dot"></div>
-            <h2><span data-i18n="status">Status</span>: <span id="status-text" data-i18n="statusRunning">Konvertierung läuft...</span></h2>
+            <h2><span data-i18n="status"></span>: <span id="status-text" data-i18n="statusRunning"></span></h2>
             <div class="tooltip">
                 <div class="tooltip-icon">?</div>
-                <span class="tooltip-text" data-i18n="tooltip">Wenn der Status nicht korrekt angezeigt wird, kann es sein, dass die Konvertierung trotzdem im Hintergrund läuft. Bitte warten Sie einige Minuten und klicken Sie dann auf "Nach PDF suchen".</span>
+                <span class="tooltip-text" data-i18n="tooltip"></span>
             </div>
         </div>
         
         <div id="status-inconsistency" class="notification hidden">
-            <strong data-i18n="attention">Achtung:</strong> <span data-i18n="statusInconsistency">Die Statusanzeige ist widersprüchlich. Bitte klicken Sie auf "Nach PDF suchen", um den tatsächlichen Status zu prüfen.</span>
+            <strong data-i18n="attention"></strong> <span data-i18n="statusInconsistency"></span>
         </div>
         
         <div class="progress-bar">
@@ -77,27 +75,27 @@
         <div class="progress-label"><span id="progress-percent">0%</span></div>
         
         <div class="circle-heading">
-            <div class="circle"></div> <strong data-i18n="conversionDetails">Konvertierungsdetails</strong>
+            <div class="circle"></div> <strong data-i18n="conversionDetails"></strong>
         </div>
         <div class="status-message" id="status-message">
-            <span data-i18n="startingConversion">Starte Konvertierung...</span>
+            <span data-i18n="startingConversion"></span>
         </div>
         
         <div id="error-details" class="hidden">
             <div class="circle-heading">
-                <div class="circle"></div> <strong data-i18n="errorMessage">Fehlermeldung</strong>
+                <div class="circle"></div> <strong data-i18n="errorMessage"></strong>
             </div>
             <div class="status-message" id="error-message"></div>
         </div>
         
         <div id="button-container">
-            <a id="download-btn" class="action-btn green" style="display: none;" data-i18n="downloadPDF">PDF herunterladen</a>
-            <a href="/" class="action-btn" id="back-btn" data-i18n="backToForm">Zurück zum Formular</a>
-            <button id="reconnect-btn" class="action-btn blue hidden" data-i18n="reconnect">Verbindung wiederherstellen</button>
+            <a id="download-btn" class="action-btn green" style="display: none;" data-i18n="downloadPDF"></a>
+            <a href="/" class="action-btn" id="back-btn" data-i18n="backToForm"></a>
+            <button id="reconnect-btn" class="action-btn blue hidden" data-i18n="reconnect"></button>
         </div>
         
         <div class="disclaimer-notice">
-            <p data-i18n="byUsingService">Durch die Nutzung dieses Dienstes akzeptieren Sie unsere <a href="/disclaimer" data-i18n="legalTerms">rechtlichen Hinweise</a>.</p>
+            <p data-i18n="byUsingService"></p>
         </div>
     </div>
 
@@ -230,7 +228,6 @@
             manualReconnect();
         });
         
-        // Initialize translations
         document.addEventListener('DOMContentLoaded', function() {
             connectEventSource();
             

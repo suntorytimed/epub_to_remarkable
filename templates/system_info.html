@@ -8,10 +8,7 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="language-switcher">
-        <button class="language-btn active" data-lang="de">DE</button>
-        <button class="language-btn" data-lang="en">EN</button>
-    </div>
+    <div class="language-switcher"></div>
 
     <h1 data-i18n="systemDiagnosis">System-Diagnose</h1>
     <span class="accent-line"></span>
@@ -90,89 +87,12 @@
     
     <a href="/" class="action-btn" data-i18n="backToHomepage">Zurück zur Startseite</a>
 
+    <script src="/static/translations.js"></script>
     <script>
-        const translations = {
-            de: {
-                systemDiagnosis: "System-Diagnose",
-                systemStatus: "Systemstatus",
-                calibre: "Calibre:",
-                ibmPlexFonts: "IBM Plex Schriftarten:",
-                installed: "Installiert",
-                notFound: "Nicht gefunden",
-                tempDirectory: "Temporäres Verzeichnis:",
-                writable: "Schreibbar",
-                notWritable: "Nicht schreibbar",
-                pythonVersion: "Python Version:",
-                activeJobs: "Aktive Jobs:",
-                completedFiles: "Abgeschlossene Dateien:",
-                availableFonts: "Verfügbare Schriftarten",
-                errorRetrievingFonts: "Fehler beim Abrufen der Schriftarten:",
-                noFontsFound: "Keine Schriftarten gefunden",
-                diskSpace: "Speicherplatz",
-                environmentVariables: "Umgebungsvariablen",
-                backToHomepage: "Zurück zur Startseite"
-            },
-            en: {
-                systemDiagnosis: "System Diagnosis",
-                systemStatus: "System Status",
-                calibre: "Calibre:",
-                ibmPlexFonts: "IBM Plex Fonts:",
-                installed: "Installed",
-                notFound: "Not found",
-                tempDirectory: "Temporary Directory:",
-                writable: "Writable",
-                notWritable: "Not writable",
-                pythonVersion: "Python Version:",
-                activeJobs: "Active Jobs:",
-                completedFiles: "Completed Files:",
-                availableFonts: "Available Fonts",
-                errorRetrievingFonts: "Error retrieving fonts:",
-                noFontsFound: "No fonts found",
-                diskSpace: "Disk Space",
-                environmentVariables: "Environment Variables",
-                backToHomepage: "Back to Homepage"
-            }
-        };
-        
-        let currentLanguage = 'de';
-        
-        function updateLanguage(lang) {
-            currentLanguage = lang;
-            
-            document.querySelectorAll('[data-i18n]').forEach(element => {
-                const key = element.getAttribute('data-i18n');
-                if (translations[lang][key]) {
-                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-                        element.placeholder = translations[lang][key];
-                    } else {
-                        element.textContent = translations[lang][key];
-                    }
-                }
-            });
-            
-            document.querySelectorAll('.language-btn').forEach(button => {
-                if (button.getAttribute('data-lang') === lang) {
-                    button.classList.add('active');
-                } else {
-                    button.classList.remove('active');
-                }
-            });
-            
-            localStorage.setItem('preferredLanguage', lang);
-            
-            document.documentElement.lang = lang;
-        }
-        
-        document.querySelectorAll('.language-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                updateLanguage(this.getAttribute('data-lang'));
-            });
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize translations
+            i18n.updatePageContent();
         });
-        
-        const savedLanguage = localStorage.getItem('preferredLanguage');
-        if (savedLanguage) {
-            updateLanguage(savedLanguage);
-        }
     </script>
 </body>
 </html>

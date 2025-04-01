@@ -8,158 +8,155 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="language-switcher">
-        <!-- Will be populated by JavaScript -->
-    </div>
+    <div class="language-switcher"></div>
 
-    <h1 data-i18n="title">eBook to PDF Converter</h1>
+    <h1 data-i18n="title"></h1>
     <span class="accent-line"></span>
     
     <form action="/" method="POST" enctype="multipart/form-data">
         <div class="section">
             <div class="form-header">
                 <span class="circle"></span>
-                <h2 data-i18n="deviceSelection">Geräteauswahl</h2>
+                <h2 data-i18n="deviceSelection"></h2>
             </div>
             
-            <label for="device_profile" data-i18n="selectDeviceProfile">Wähle Geräteprofil:</label>
+            <label for="device_profile" data-i18n="selectDeviceProfile"></label>
             <select name="device_profile" id="device_profile" onchange="toggleParams()">
-                <option value="reMarkable" data-i18n="remarkablePro">reMarkable Paper Pro</option>
-                <option value="boox_air_4c" data-i18n="booxAir4c">Boox Air 4c</option>
-                <option value="user_defined" data-i18n="userDefined">Benutzerdefiniert</option>
+                <option value="reMarkable" data-i18n="remarkablePro"></option>
+                <option value="boox_air_4c" data-i18n="booxAir4c"></option>
+                <option value="user_defined" data-i18n="userDefined"></option>
             </select>
             
             <div class="form-header">
                 <span class="circle"></span>
-                <h2 data-i18n="uploadFile">Datei hochladen</h2>
+                <h2 data-i18n="uploadFile"></h2>
             </div>
-            <label for="epub_file" data-i18n="selectEpubFile">EPUB-Datei auswählen:</label>
+            <label for="epub_file" data-i18n="selectEpubFile"></label>
             <input type="file" name="epub_file" id="epub_file" accept=".epub" required>
             
-            <button type="submit" data-i18n="convertToPDF">Zu PDF konvertieren</button>
+            <button type="submit" data-i18n="convertToPDF"></button>
             <div class="disclaimer-notice">
-                <p data-i18n="byUsingService">Durch die Nutzung dieses Dienstes akzeptieren Sie unsere <a href="/disclaimer" data-i18n="legalTerms">rechtlichen Hinweise</a>.</p>
+                <p data-i18n="byUsingService"></p>
             </div>
         </div>
 
-        <!-- Parameters for user-defined configuration -->
         <div id="parameters" class="section" style="display: none;">
             <div class="form-header">
                 <span class="circle"></span>
-                <h2 data-i18n="conversionParameters">Konvertierungsparameter</h2>
+                <h2 data-i18n="conversionParameters"></h2>
             </div>
 
             <div class="grid">
                 <div>
-                    <label for="input_profile" data-i18n="inputProfile">Eingabeprofil:</label>
+                    <label for="input_profile" data-i18n="inputProfile"></label>
                     <input type="text" name="input_profile" id="input_profile" value="{{ default_params['input_profile'] }}">
                 </div>
                 
                 <div>
-                    <label for="output_profile" data-i18n="outputProfile">Ausgabeprofil:</label>
+                    <label for="output_profile" data-i18n="outputProfile"></label>
                     <input type="text" name="output_profile" id="output_profile" value="{{ default_params['output_profile'] }}">
                 </div>
             </div>
 
-            <h3 data-i18n="fontSizes">Schriftgrößen</h3>
+            <h3 data-i18n="fontSizes"></h3>
             <div class="grid">
                 <div>
-                    <label for="base_font_size" data-i18n="baseFontSize">Basis-Schriftgröße:</label>
+                    <label for="base_font_size" data-i18n="baseFontSize"></label>
                     <input type="text" name="base_font_size" id="base_font_size" value="{{ default_params['base_font_size'] }}">
                 </div>
                 
                 <div>
-                    <label for="default_font_size" data-i18n="defaultFontSize">Standard-Schriftgröße:</label>
+                    <label for="default_font_size" data-i18n="defaultFontSize"></label>
                     <input type="text" name="default_font_size" id="default_font_size" value="{{ default_params['default_font_size'] }}">
                 </div>
                 
                 <div>
-                    <label for="mono_font_size" data-i18n="monoFontSize">Monospace-Schriftgröße:</label>
+                    <label for="mono_font_size" data-i18n="monoFontSize"></label>
                     <input type="text" name="mono_font_size" id="mono_font_size" value="{{ default_params['mono_font_size'] }}">
                 </div>
             </div>
 
-            <h3 data-i18n="fontOptions">Schriftoptionen</h3>
+            <h3 data-i18n="fontOptions"></h3>
             <div class="checkbox-container">
                 <input type="checkbox" name="embed_all_fonts" id="embed_all_fonts" {% if default_params['embed_all_fonts'] %}checked{% endif %}>
-                <label for="embed_all_fonts" data-i18n="embedAllFonts">Alle Schriften einbetten</label>
+                <label for="embed_all_fonts" data-i18n="embedAllFonts"></label>
             </div>
             
             <div class="checkbox-container">
                 <input type="checkbox" name="subset_embedded_fonts" id="subset_embedded_fonts" {% if default_params['subset_embedded_fonts'] %}checked{% endif %}>
-                <label for="subset_embedded_fonts" data-i18n="subsetEmbeddedFonts">Eingebettete Schriften beschränken</label>
+                <label for="subset_embedded_fonts" data-i18n="subsetEmbeddedFonts"></label>
             </div>
             
             <div class="checkbox-container">
                 <input type="checkbox" name="unsmarten_punctuation" id="unsmarten_punctuation" {% if default_params['unsmarten_punctuation'] %}checked{% endif %}>
-                <label for="unsmarten_punctuation" data-i18n="unsmartenPunctuation">Anführungszeichen vereinfachen</label>
+                <label for="unsmarten_punctuation" data-i18n="unsmartenPunctuation"></label>
             </div>
 
-            <h3 data-i18n="sizeLayout">Größe & Layout</h3>
+            <h3 data-i18n="sizeLayout"></h3>
             <div class="grid">
                 <div>
-                    <label for="custom_size" data-i18n="customSize">Benutzerdefinierte Größe:</label>
+                    <label for="custom_size" data-i18n="customSize"></label>
                     <input type="text" name="custom_size" id="custom_size" value="{{ default_params['custom_size'] }}">
                 </div>
                 
                 <div>
-                    <label for="unit" data-i18n="unit">Einheit:</label>
+                    <label for="unit" data-i18n="unit"></label>
                     <input type="text" name="unit" id="unit" value="{{ default_params['unit'] }}">
                 </div>
             </div>
 
-            <h3 data-i18n="pdfFonts">PDF-Schriften</h3>
+            <h3 data-i18n="pdfFonts"></h3>
             <div>
-                <label for="pdf_sans_family" data-i18n="pdfSansFamily">PDF Sans-Schriftfamilie:</label>
+                <label for="pdf_sans_family" data-i18n="pdfSansFamily"></label>
                 <input type="text" name="pdf_sans_family" id="pdf_sans_family" value="{{ default_params['pdf_sans_family'] }}">
             </div>
             
             <div>
-                <label for="pdf_serif_family" data-i18n="pdfSerifFamily">PDF Serif-Schriftfamilie:</label>
+                <label for="pdf_serif_family" data-i18n="pdfSerifFamily"></label>
                 <input type="text" name="pdf_serif_family" id="pdf_serif_family" value="{{ default_params['pdf_serif_family'] }}">
             </div>
             
             <div>
-                <label for="pdf_mono_family" data-i18n="pdfMonoFamily">PDF Monospace-Schriftfamilie:</label>
+                <label for="pdf_mono_family" data-i18n="pdfMonoFamily"></label>
                 <input type="text" name="pdf_mono_family" id="pdf_mono_family" value="{{ default_params['pdf_mono_family'] }}">
             </div>
             
             <div>
-                <label for="pdf_standard_font" data-i18n="pdfStandardFont">PDF Standardschrift:</label>
+                <label for="pdf_standard_font" data-i18n="pdfStandardFont"></label>
                 <input type="text" name="pdf_standard_font" id="pdf_standard_font" value="{{ default_params['pdf_standard_font'] }}">
             </div>
 
-            <h3 data-i18n="pdfMargins">PDF-Ränder</h3>
+            <h3 data-i18n="pdfMargins"></h3>
             <div class="grid">
                 <div>
-                    <label for="pdf_page_margin_left" data-i18n="leftMargin">Linker Rand:</label>
+                    <label for="pdf_page_margin_left" data-i18n="leftMargin"></label>
                     <input type="text" name="pdf_page_margin_left" id="pdf_page_margin_left" value="{{ default_params['pdf_page_margin_left'] }}">
                 </div>
                 
                 <div>
-                    <label for="pdf_page_margin_right" data-i18n="rightMargin">Rechter Rand:</label>
+                    <label for="pdf_page_margin_right" data-i18n="rightMargin"></label>
                     <input type="text" name="pdf_page_margin_right" id="pdf_page_margin_right" value="{{ default_params['pdf_page_margin_right'] }}">
                 </div>
                 
                 <div>
-                    <label for="pdf_page_margin_top" data-i18n="topMargin">Oberer Rand:</label>
+                    <label for="pdf_page_margin_top" data-i18n="topMargin"></label>
                     <input type="text" name="pdf_page_margin_top" id="pdf_page_margin_top" value="{{ default_params['pdf_page_margin_top'] }}">
                 </div>
                 
                 <div>
-                    <label for="pdf_page_margin_bottom" data-i18n="bottomMargin">Unterer Rand:</label>
+                    <label for="pdf_page_margin_bottom" data-i18n="bottomMargin"></label>
                     <input type="text" name="pdf_page_margin_bottom" id="pdf_page_margin_bottom" value="{{ default_params['pdf_page_margin_bottom'] }}">
                 </div>
             </div>
 
-            <h3 data-i18n="otherSettings">Weitere Einstellungen</h3>
+            <h3 data-i18n="otherSettings"></h3>
             <div class="checkbox-container">
                 <input type="checkbox" name="preserve_cover_aspect_ratio" id="preserve_cover_aspect_ratio" {% if default_params['preserve_cover_aspect_ratio'] %}checked{% endif %}>
-                <label for="preserve_cover_aspect_ratio" data-i18n="preserveCoverAspectRatio">Seitenverhältnis des Covers beibehalten</label>
+                <label for="preserve_cover_aspect_ratio" data-i18n="preserveCoverAspectRatio"></label>
             </div>
             
             <div>
-                <label for="change_justification" data-i18n="justification">Ausrichtung:</label>
+                <label for="change_justification" data-i18n="justification"></label>
                 <input type="text" name="change_justification" id="change_justification" value="{{ default_params['change_justification'] }}">
             </div>
         </div>
@@ -168,7 +165,6 @@
     <script src="/static/translations.js"></script>
     <script>
         function updateFileInputText() {
-            // Placeholder for file input styling if needed
         }
 
         function toggleParams() {

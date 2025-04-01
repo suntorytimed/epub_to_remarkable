@@ -17,42 +17,56 @@
     </style>
 </head>
 <body>
-    <div class="language-switcher">
-        <!-- Will be populated by JavaScript -->
-    </div>
+    <div class="language-switcher"></div>
 
-    <h1 data-i18n="disclaimerTitle">Rechtliche Hinweise</h1>
+    <h1 data-i18n="disclaimerTitle"></h1>
     <span class="accent-line"></span>
     
     <div class="section">
         <div class="disclaimer-section">
-            <h2 data-i18n="dataStorageTitle">Datenspeicherung</h2>
-            <p data-i18n="dataStorageText">Alle hochgeladenen Dateien werden nur temporär für den Konvertierungsprozess gespeichert. Nach erfolgreicher Konvertierung bleiben die Dateien für einen begrenzten Zeitraum (maximal {{ timeout_minutes }} Minuten) verfügbar, um den Download zu ermöglichen. Danach werden sie automatisch gelöscht. Wir speichern keine Benutzer- oder Dateimetadaten über diesen Zeitraum hinaus.</p>
+            <h2 data-i18n="dataStorageTitle"></h2>
+            <p data-i18n="dataStorageText"></p>
         </div>
 
         <div class="disclaimer-section">
-            <h2 data-i18n="contentResponsibilityTitle">Inhaltsverantwortung</h2>
-            <p data-i18n="contentResponsibilityText">Benutzer sind allein verantwortlich für die Inhalte der hochgeladenen Dateien. Das Hochladen oder Konvertieren von urheberrechtlich geschütztem Material ohne entsprechende Rechte, sowie von illegalen, beleidigenden oder anderweitig rechtswidrigen Inhalten ist strengstens untersagt. Der Betreiber dieses Dienstes behält sich das Recht vor, verdächtige Aktivitäten zu untersuchen und bei Bedarf an die zuständigen Behörden zu melden.</p>
+            <h2 data-i18n="contentResponsibilityTitle"></h2>
+            <p data-i18n="contentResponsibilityText"></p>
         </div>
 
         <div class="disclaimer-section">
-            <h2 data-i18n="liabilityTitle">Haftungsausschluss</h2>
-            <p data-i18n="liabilityText">Dieser Dienst wird "wie er ist" und ohne jegliche Garantie bereitgestellt. Der Betreiber übernimmt keine Haftung für Schäden, die durch die Nutzung dieses Dienstes entstehen könnten, einschließlich, aber nicht beschränkt auf Datenverlust, Systemschäden oder andere technische Probleme. Die Nutzung erfolgt auf eigenes Risiko. Der Betreiber garantiert nicht die ununterbrochene oder fehlerfreie Verfügbarkeit des Dienstes.</p>
+            <h2 data-i18n="liabilityTitle"></h2>
+            <p data-i18n="liabilityText"></p>
         </div>
 
         <div class="disclaimer-section">
-            <h2 data-i18n="copyrightTitle">Urheberrecht</h2>
-            <p data-i18n="copyrightText">Benutzer dürfen diesen Dienst nur zur Konvertierung von Dateien verwenden, an denen sie die entsprechenden Rechte besitzen. Dies umfasst persönliche Dokumente, Werke unter freien Lizenzen oder Material, für das Sie die ausdrückliche Erlaubnis zur Konvertierung haben. Die Konvertierung urheberrechtlich geschützter Werke ohne entsprechende Genehmigung ist verboten und kann rechtliche Konsequenzen nach sich ziehen.</p>
+            <h2 data-i18n="copyrightTitle"></h2>
+            <p data-i18n="copyrightText"></p>
         </div>
 
         <div class="disclaimer-section">
-            <h2 data-i18n="termsOfUseTitle">Nutzungsbedingungen</h2>
-            <p data-i18n="termsOfUseText">Durch die Nutzung dieses Dienstes erklären Sie sich mit diesen Bedingungen einverstanden. Bei Verstößen gegen diese Bedingungen kann Ihnen die Nutzung des Dienstes untersagt werden. Sie stimmen zu, den Dienst nicht zu missbrauchen, keine automatisierten Massenanfragen zu stellen und keine Maßnahmen zu ergreifen, die die Funktionsfähigkeit des Dienstes beeinträchtigen könnten.</p>
+            <h2 data-i18n="termsOfUseTitle"></h2>
+            <p data-i18n="termsOfUseText"></p>
         </div>
 
-        <a href="/" class="action-btn" data-i18n="backToConverter">Zurück zum Konverter</a>
+        <a href="/" class="action-btn" data-i18n="backToConverter"></a>
     </div>
 
     <script src="/static/translations.js"></script>
+    <script>
+        var timeoutMinutes = {{ timeout_minutes }};
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            var elements = document.querySelectorAll('[data-i18n="dataStorageText"]');
+            elements.forEach(function(element) {
+                var key = element.getAttribute('data-i18n');
+                var lang = i18n.getCurrentLanguage();
+                if (translations[lang] && translations[lang][key]) {
+                    var text = translations[lang][key];
+                    text = text.replace('{{ timeout_minutes }}', timeoutMinutes);
+                    element.textContent = text;
+                }
+            });
+        });
+    </script>
 </body>
 </html>

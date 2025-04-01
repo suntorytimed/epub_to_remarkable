@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 app = Flask(__name__,
-            static_folder='templates',
+            static_folder='static',
             static_url_path='/static')
 
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})
