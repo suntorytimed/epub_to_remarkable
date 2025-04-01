@@ -77,11 +77,15 @@ def save_jobs():
     """
     Save current conversion jobs to disk if state has changed.
     Only writes to disk when necessary to reduce I/O.
+    Force save when _last_jobs_hash is None (first time or after modifications).
     """
     global _last_jobs_hash
     
     current_hash = get_job_cache_key()
-    if _last_jobs_hash == current_hash:
+
+    if _last_jobs_hash is None:
+        app.logger.debug("First save or important state change, forcing save")
+    elif _last_jobs_hash == current_hash:
         app.logger.debug("No change in job state, skipping save")
         return
         
@@ -650,7 +654,9 @@ def index():
             )
             thread.daemon = True
             thread.start()
-
+            
+            time.sleep(0.2)  
+            
             app.logger.info(f"Redirecting to progress page for job {job_id}")
             return render_template("progress.html", job_id=job_id)
 
@@ -672,8 +678,16 @@ def progress(job_id):
     app.logger.info(f"SSE connection established for job {job_id}")
 
     def generate():
+        global conversion_progress
         if job_id not in conversion_progress:
-            app.logger.warning(f"Job {job_id} not found in conversion_progress")
+            app.logger.debug(f"Job {job_id} not in memory, trying to load from disk")
+            disk_jobs = load_saved_jobs()
+            if job_id in disk_jobs:
+                app.logger.info(f"Found job {job_id} in saved jobs file, reloading")
+                conversion_progress.update(disk_jobs)
+        
+        if job_id not in conversion_progress and job_id not in completed_files:
+            app.logger.warning(f"Job {job_id} not found in active or completed jobs")
             error_data = {
                 'status': 'failed',
                 'message': 'Job not found',
@@ -682,22 +696,86 @@ def progress(job_id):
             }
             yield f"data: {json.dumps(error_data)}\n\n"
             return
+        
+        if job_id in completed_files and job_id not in conversion_progress:
+            file_info = completed_files[job_id]
+            output_path = file_info['path'] if isinstance(file_info, dict) else file_info
             
-        while job_id in conversion_progress:
-            data = conversion_progress[job_id]
-            app.logger.debug(f"Sending progress update for job {job_id}: {data['status']}, {data['progress']}%")
-            
-            if 'detailed_logs' in data and len(data['detailed_logs']) > 100:
-                trimmed_data = data.copy()
-                trimmed_data['detailed_logs'] = data['detailed_logs'][-100:]
-                yield f"data: {json.dumps(trimmed_data)}\n\n"
-            else:
-                yield f"data: {json.dumps(data)}\n\n"
-            
-            if data['status'] in ['completed', 'failed']:
-                app.logger.info(f"Job {job_id} {data['status']}")
-                break
+            if os.path.exists(output_path):
+                app.logger.info(f"Found completed job {job_id} in completed_files")
                 
+                completed_data = {
+                    'status': 'completed',
+                    'progress': 100,
+                    'message': 'Conversion completed successfully!',
+                }
+                
+                if isinstance(file_info, dict):
+                    if 'author' in file_info and 'title' in file_info:
+                        completed_data['author'] = file_info['author']
+                        completed_data['title'] = file_info['title']
+                
+                yield f"data: {json.dumps(completed_data)}\n\n"
+                return
+            
+        connection_lost = False
+        retry_count = 0
+        max_retries = 30
+        
+        while True:
+            if job_id in conversion_progress:
+                connection_lost = False
+                retry_count = 0
+                data = conversion_progress[job_id]
+                app.logger.debug(f"Sending progress update for job {job_id}: {data['status']}, {data['progress']}%")
+                
+                if 'detailed_logs' in data and len(data['detailed_logs']) > 100:
+                    trimmed_data = data.copy()
+                    trimmed_data['detailed_logs'] = data['detailed_logs'][-100:]
+                    yield f"data: {json.dumps(trimmed_data)}\n\n"
+                else:
+                    yield f"data: {json.dumps(data)}\n\n"
+                
+                if data['status'] in ['completed', 'failed']:
+                    app.logger.info(f"Job {job_id} {data['status']}")
+                    break
+            elif job_id in completed_files:
+                file_info = completed_files[job_id]
+                output_path = file_info['path'] if isinstance(file_info, dict) else file_info
+                
+                if os.path.exists(output_path):
+                    app.logger.info(f"Job {job_id} completed and found in completed_files")
+                    
+                    completed_data = {
+                        'status': 'completed',
+                        'progress': 100,
+                        'message': 'Conversion completed successfully!',
+                    }
+                    
+                    if isinstance(file_info, dict):
+                        if 'author' in file_info and 'title' in file_info:
+                            completed_data['author'] = file_info['author']
+                            completed_data['title'] = file_info['title']
+                    
+                    yield f"data: {json.dumps(completed_data)}\n\n"
+                    break
+            else:
+                if not connection_lost:
+                    app.logger.warning(f"Connection to job {job_id} lost, attempting to reconnect")
+                    connection_lost = True
+                
+                retry_count += 1
+                if retry_count > max_retries:
+                    app.logger.warning(f"Maximum reconnection attempts reached for job {job_id}")
+                    error_data = {
+                        'status': 'failed',
+                        'message': 'Connection lost',
+                        'progress': 0,
+                        'error_details': 'Die Verbindung zum Server wurde unterbrochen. Falls die Konvertierung abgeschlossen wurde, sollte die PDF automatisch erscheinen.'
+                    }
+                    yield f"data: {json.dumps(error_data)}\n\n"
+                    break
+            
             time.sleep(0.5)
     
     response = Response(generate(), mimetype="text/event-stream")
@@ -718,8 +796,22 @@ def download(job_id):
         Response: File download or error message
     """
     app.logger.info(f"Download requested for job {job_id}")
+    global conversion_progress, completed_files
+    
     app.logger.debug(f"Job ID {job_id} in conversion_progress: {job_id in conversion_progress}")
     app.logger.debug(f"Job ID {job_id} in completed_files: {job_id in completed_files}")
+    if job_id not in conversion_progress and job_id not in completed_files:
+        app.logger.debug(f"Job {job_id} not in memory, trying to load from disk")
+        disk_jobs = load_saved_jobs()
+        disk_completed = load_completed_files()
+        
+        if job_id in disk_jobs:
+            app.logger.info(f"Found job {job_id} in saved jobs file, reloading")
+            conversion_progress.update(disk_jobs)
+        
+        if job_id in disk_completed:
+            app.logger.info(f"Found job {job_id} in completed files, reloading")
+            completed_files.update(disk_completed)
     
     if job_id in conversion_progress:
         job_data = conversion_progress[job_id]
@@ -972,6 +1064,8 @@ def api_convert():
         thread.daemon = True
         thread.start()
 
+        time.sleep(0.2)
+
         base_url = request.url_root.rstrip('/')
         response = {
             "job_id": job_id,
@@ -994,6 +1088,14 @@ def api_job_status(job_id):
         Response: JSON with job status information
     """
     app.logger.info(f"API: Status requested for job {job_id}")
+    
+    global conversion_progress
+    if job_id not in conversion_progress:
+        app.logger.debug(f"API: Job {job_id} not in memory, trying to load from disk")
+        disk_jobs = load_saved_jobs()
+        if job_id in disk_jobs:
+            app.logger.info(f"API: Found job {job_id} in saved jobs file, reloading")
+            conversion_progress.update(disk_jobs)
     
     if job_id in conversion_progress:
         job_data = conversion_progress[job_id].copy()
@@ -1050,8 +1152,22 @@ def api_job_download(job_id):
         Response: File download or error JSON
     """
     app.logger.info(f"API: Download requested for job {job_id}")
+    global conversion_progress, completed_files
+    
     app.logger.debug(f"API: Job ID {job_id} in conversion_progress: {job_id in conversion_progress}")
     app.logger.debug(f"API: Job ID {job_id} in completed_files: {job_id in completed_files}")
+    if job_id not in conversion_progress and job_id not in completed_files:
+        app.logger.debug(f"API: Job {job_id} not in memory, trying to load from disk")
+        disk_jobs = load_saved_jobs()
+        disk_completed = load_completed_files()
+        
+        if job_id in disk_jobs:
+            app.logger.info(f"API: Found job {job_id} in saved jobs file, reloading")
+            conversion_progress.update(disk_jobs)
+        
+        if job_id in disk_completed:
+            app.logger.info(f"API: Found job {job_id} in completed files, reloading")
+            completed_files.update(disk_completed)
     
     if job_id in conversion_progress:
         job_data = conversion_progress[job_id]

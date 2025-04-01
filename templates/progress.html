@@ -94,7 +94,7 @@
         <div id="button-container">
             <a id="download-btn" class="action-btn green" style="display: none;" data-i18n="downloadPDF">PDF herunterladen</a>
             <a href="/" class="action-btn" id="back-btn" data-i18n="backToForm">Zurück zum Formular</a>
-            <button id="find-pdf-btn" class="action-btn blue hidden" data-i18n="findPDF">Nach PDF suchen</button>
+            <button id="reconnect-btn" class="action-btn blue hidden" data-i18n="reconnect">Verbindung wiederherstellen</button>
         </div>
     </div>
 
@@ -109,20 +109,20 @@
                 statusLostConnection: "Verbindung verloren",
                 statusSearching: "Suche nach PDF...",
                 statusInProgress: "In Bearbeitung",
-                tooltip: "Wenn der Status nicht korrekt angezeigt wird, kann es sein, dass die Konvertierung trotzdem im Hintergrund läuft. Bitte warten Sie einige Minuten und klicken Sie dann auf \"Nach PDF suchen\".",
+                tooltip: "Wenn der Status nicht korrekt angezeigt wird, kann es sein, dass die Konvertierung trotzdem im Hintergrund läuft. Bitte warten Sie einige Minuten und klicken Sie dann auf \"Verbindung wiederherstellen\".",
                 startingConversion: "Starte Konvertierung...",
                 conversionDetails: "Konvertierungsdetails",
                 errorMessage: "Fehlermeldung",
                 downloadPDF: "PDF herunterladen",
                 backToForm: "Zurück zum Formular",
-                findPDF: "Nach PDF suchen",
-                searchingPDF: "Suche nach abgeschlossener Konvertierung...",
+                reconnect: "Verbindung wiederherstellen",
+                reconnecting: "Verbindung wird wiederhergestellt...",
                 conversionSuccessful: "Konvertierung erfolgreich abgeschlossen!",
                 conversionInProgress: "Die Konvertierung scheint noch im Gange zu sein oder ist fehlgeschlagen. Bitte versuchen Sie es später erneut.",
                 errorOccurred: "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
-                connectionLost: "Die Server-Verbindung wurde unterbrochen. Die Konvertierung läuft aber möglicherweise noch im Hintergrund. Bitte verwenden Sie den \"Nach PDF suchen\"-Button, um nach der fertigen PDF zu suchen.",
+                connectionLost: "Die Server-Verbindung wurde unterbrochen. Die Konvertierung läuft aber möglicherweise noch im Hintergrund. Bitte verwenden Sie den \"Verbindung wiederherstellen\"-Button, um die Verbindung erneut herzustellen.",
                 attention: "Achtung",
-                statusInconsistency: "Die Statusanzeige ist widersprüchlich. Bitte klicken Sie auf \"Nach PDF suchen\", um den tatsächlichen Status zu prüfen.",
+                statusInconsistency: "Die Statusanzeige ist widersprüchlich. Bitte klicken Sie auf \"Verbindung wiederherstellen\", um den tatsächlichen Status zu prüfen.",
                 jobNotFoundError: "Der Konvertierungsauftrag wurde nicht gefunden. Dies kann passieren, wenn:\n- Die Seite neu geladen wurde\n- Der Server neu gestartet wurde\n- Der Auftrag bereits abgeschlossen oder abgelaufen ist\n\nBitte versuchen Sie es erneut mit einer neuen Konvertierung."
             },
             en: {
@@ -134,20 +134,20 @@
                 statusLostConnection: "Connection lost",
                 statusSearching: "Searching for PDF...",
                 statusInProgress: "In progress",
-                tooltip: "If the status is not displayed correctly, the conversion may still be running in the background. Please wait a few minutes and then click \"Find PDF\".",
+                tooltip: "If the status is not displayed correctly, the conversion may still be running in the background. Please wait a few minutes and then click \"Reconnect\".",
                 startingConversion: "Starting conversion...",
                 conversionDetails: "Conversion Details",
                 errorMessage: "Error Message",
                 downloadPDF: "Download PDF",
                 backToForm: "Back to Form",
-                findPDF: "Find PDF",
-                searchingPDF: "Looking for completed conversion...",
+                reconnect: "Reconnect",
+                reconnecting: "Reconnecting...",
                 conversionSuccessful: "Conversion completed successfully!",
                 conversionInProgress: "The conversion appears to be still in progress or has failed. Please try again later.",
                 errorOccurred: "An error occurred. Please try again later.",
-                connectionLost: "The server connection was interrupted. The conversion may still be running in the background. Please use the \"Find PDF\" button to check for the completed PDF.",
+                connectionLost: "The server connection was interrupted. The conversion may still be running in the background. Please use the \"Reconnect\" button to re-establish the connection.",
                 attention: "Attention",
-                statusInconsistency: "The status display is inconsistent. Please click on \"Find PDF\" to check the actual status.",
+                statusInconsistency: "The status display is inconsistent. Please click on \"Reconnect\" to check the actual status.",
                 jobNotFoundError: "The conversion job was not found. This can happen if:\n- The page was reloaded\n- The server was restarted\n- The job has already completed or expired\n\nPlease try again with a new conversion."
             }
         };
@@ -195,40 +195,31 @@
         const jobId = "{{ job_id }}";
         let messageLog = [];
         let eventSource = null;
-        let connectionAttempts = 0;
-        const MAX_RECONNECT_ATTEMPTS = 3;
-        let jobNotFoundReceived = false;
+        let autoReconnectTimer = null;
+        let reconnectAttempt = 0;
+        const MAX_CLIENT_RECONNECT_ATTEMPTS = 5;
         
         function connectEventSource() {
             if (eventSource) {
                 eventSource.close();
             }
             
-            connectionAttempts++;
+            if (autoReconnectTimer) {
+                clearTimeout(autoReconnectTimer);
+            }
             
-            if (connectionAttempts > MAX_RECONNECT_ATTEMPTS) {
-                console.log("Maximum reconnection attempts reached");
-                document.getElementById('status-text').textContent = translations[currentLanguage].statusLostConnection;
-                document.getElementById('status-message').textContent = translations[currentLanguage].connectionLost;
-                updateFindPdfButtonVisibility();
-                return;
+            reconnectAttempt++;
+            
+            if (reconnectAttempt > 1) {
+                document.getElementById('status-message').textContent = 
+                    `${translations[currentLanguage].connectionLost} (${translations[currentLanguage].statusSearching}...)`;
             }
             
             eventSource = new EventSource(`/progress/${jobId}`);
             
             eventSource.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-                
-                if (data.message && data.message.includes("Job not found")) {
-                    jobNotFoundReceived = true;
-                    updateFindPdfButtonVisibility();
-                    return;
-                }
-                
-                if (data.reconnect) {
-                    setTimeout(connectEventSource, 1000);
-                    return;
-                }
+                reconnectAttempt = 0;
                 
                 const progressFill = document.getElementById('progress-fill');
                 progressFill.style.width = `${data.progress}%`;
@@ -252,12 +243,12 @@
                     
                     document.getElementById('download-btn').style.display = 'inline-block';
                     document.getElementById('download-btn').href = `/download/${jobId}`;
-                    updateFindPdfButtonVisibility();
+                    document.getElementById('reconnect-btn').classList.add('hidden');
+                    document.getElementById('status-inconsistency').classList.add('hidden');
                     
                     eventSource.close();
-                    
-                    if (jobNotFoundReceived) {
-                        document.getElementById('status-inconsistency').classList.remove('hidden');
+                    if (autoReconnectTimer) {
+                        clearTimeout(autoReconnectTimer);
                     }
                 } 
                 else if (data.status === 'failed') {
@@ -270,74 +261,72 @@
                         document.getElementById('error-message').textContent = data.error_details;
                     }
                     
-                    updateFindPdfButtonVisibility();
+                    if (data.message && data.message.includes("Connection lost")) {
+                        document.getElementById('reconnect-btn').classList.remove('hidden');
+                    } else {
+                        document.getElementById('reconnect-btn').classList.add('hidden');
+                    }
                     
                     eventSource.close();
-                    
-                    if (progressFill.style.width === '100%' || jobNotFoundReceived) {
-                        document.getElementById('status-inconsistency').classList.remove('hidden');
+                    if (autoReconnectTimer) {
+                        clearTimeout(autoReconnectTimer);
                     }
                 }
             };
             
-            eventSource.onerror = function() {
-                console.error('Verbindung zum Server unterbrochen');
+            eventSource.onerror = function(event) {
+                console.error('EventSource connection error, attempting to reconnect');
                 
-                if (connectionAttempts <= MAX_RECONNECT_ATTEMPTS) {
-                    setTimeout(connectEventSource, 3000);
+                if (reconnectAttempt <= MAX_CLIENT_RECONNECT_ATTEMPTS) {
+                    const backoffTime = Math.min(1000 * Math.pow(1.5, reconnectAttempt), 10000);
+                    console.log(`Attempting reconnection in ${backoffTime}ms (attempt ${reconnectAttempt})`);
+                    
+                    autoReconnectTimer = setTimeout(() => {
+                        if (document.getElementById('download-btn').style.display !== 'inline-block') {
+                            connectEventSource();
+                        }
+                    }, backoffTime);
                 } else {
+                    console.log("Maximum reconnection attempts reached, showing manual reconnect button");
                     document.getElementById('status-text').textContent = translations[currentLanguage].statusLostConnection;
                     document.getElementById('status-message').textContent = translations[currentLanguage].connectionLost;
-                    updateFindPdfButtonVisibility();
+                    document.getElementById('reconnect-btn').classList.remove('hidden');
                 }
             };
         }
         
-        function updateFindPdfButtonVisibility() {
-            const findPdfBtn = document.getElementById('find-pdf-btn');
-            if (connectionAttempts > MAX_RECONNECT_ATTEMPTS || jobNotFoundReceived) {
-                findPdfBtn.classList.remove('hidden');
-            } else {
-                findPdfBtn.classList.add('hidden');
-            }
-        }
-        
-        document.getElementById('find-pdf-btn').addEventListener('click', function() {
+        function manualReconnect() {
             const statusText = document.getElementById('status-text');
             const statusMessage = document.getElementById('status-message');
             statusText.textContent = translations[currentLanguage].statusSearching;
-            statusMessage.textContent = translations[currentLanguage].searchingPDF;
+            statusMessage.textContent = translations[currentLanguage].reconnecting;
             
-            fetch(`/download/${jobId}`)
-                .then(response => {
-                    if (response.ok) {
-                        statusText.textContent = translations[currentLanguage].statusCompleted;
-                        statusMessage.textContent = translations[currentLanguage].conversionSuccessful;
-                        document.getElementById('status-dot').classList.remove('failed');
-                        document.getElementById('status-dot').classList.add('completed');
-                        
-                        document.getElementById('download-btn').style.display = 'inline-block';
-                        document.getElementById('download-btn').href = `/download/${jobId}`;
-                        document.getElementById('find-pdf-btn').classList.add('hidden');
-                        
-                        document.getElementById('status-inconsistency').classList.add('hidden');
-                        
-                        document.getElementById('error-details').classList.add('hidden');
-                    } else {
-                        statusText.textContent = translations[currentLanguage].statusInProgress;
-                        statusMessage.textContent = translations[currentLanguage].conversionInProgress;
-                    }
-                })
-                .catch(error => {
-                    console.error('Fehler beim Suchen der PDF:', error);
-                    statusText.textContent = translations[currentLanguage].statusFailed;
-                    statusMessage.textContent = translations[currentLanguage].errorOccurred;
-                });
+            reconnectAttempt = 0;
+            
+            if (autoReconnectTimer) {
+                clearTimeout(autoReconnectTimer);
+                autoReconnectTimer = null;
+            }
+            
+            connectEventSource();
+            
+            document.getElementById('reconnect-btn').classList.add('hidden');
+            
+            document.getElementById('status-inconsistency').classList.add('hidden');
+        }
+        
+        document.getElementById('reconnect-btn').addEventListener('click', function() {
+            manualReconnect();
         });
         
         connectEventSource();
         
-        updateFindPdfButtonVisibility();
+        if (sessionStorage.getItem('wasConnected_' + jobId) === 'true') {
+            console.log('Detected page reload, forcing reconnection');
+            manualReconnect();
+        }
+        
+        sessionStorage.setItem('wasConnected_' + jobId, 'true');
     </script>
 </body>
 </html>
