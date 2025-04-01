@@ -62,7 +62,8 @@ def load_saved_jobs():
             app.logger.error(f"Error loading saved jobs: {str(e)}")
     return {}
 
-@lru_cache(maxsize=32)
+_last_jobs_hash = None
+
 def get_job_cache_key():
     """
     Generate a cache key based on the current job state to prevent excessive writes.
@@ -77,14 +78,19 @@ def save_jobs():
     Save current conversion jobs to disk if state has changed.
     Only writes to disk when necessary to reduce I/O.
     """
-    current_key = get_job_cache_key.cache_info().currsize
-    if current_key > 0:
+    global _last_jobs_hash
+    
+    current_hash = get_job_cache_key()
+    if _last_jobs_hash == current_hash:
+        app.logger.debug("No change in job state, skipping save")
         return
         
     try:
+        app.logger.debug(f"Saving {len(conversion_progress)} jobs to {JOB_DATA_FILE}")
         with open(JOB_DATA_FILE, 'w') as f:
             json.dump(conversion_progress, f)
-        get_job_cache_key()
+        _last_jobs_hash = current_hash
+        app.logger.debug("Jobs saved successfully")
     except Exception as e:
         app.logger.error(f"Error saving jobs: {str(e)}")
 
@@ -188,7 +194,8 @@ def build_conversion_command(input_path, output_path, params):
         
     return command
 
-@lru_cache(maxsize=32)
+_last_completed_files_hash = None
+
 def get_completed_files_cache_key():
     """
     Generate a cache key based on the completed files state to prevent excessive writes.
@@ -203,14 +210,18 @@ def save_completed_files():
     Save current completed files to disk if state has changed.
     Only writes to disk when necessary to reduce I/O.
     """
-    current_key = get_completed_files_cache_key.cache_info().currsize
-    if current_key > 0:
+    global _last_completed_files_hash
+    
+    current_hash = get_completed_files_cache_key()
+    if _last_completed_files_hash == current_hash:
+        app.logger.debug("No change in completed files state, skipping save")
         return
         
     try:
+        app.logger.debug(f"Saving {len(completed_files)} entries to {COMPLETED_FILES_FILE}")
         with open(COMPLETED_FILES_FILE, 'w') as f:
             json.dump(completed_files, f)
-        get_completed_files_cache_key()
+        _last_completed_files_hash = current_hash
         app.logger.debug(f"Saved {len(completed_files)} entries to {COMPLETED_FILES_FILE}")
     except Exception as e:
         app.logger.error(f"Error saving completed files: {str(e)}")
@@ -259,6 +270,10 @@ def job_cleaner():
 
 conversion_progress = load_saved_jobs()
 completed_files = load_completed_files()
+
+_last_jobs_hash = get_job_cache_key() if conversion_progress else None
+_last_completed_files_hash = get_completed_files_cache_key() if completed_files else None
+app.logger.debug(f"Initialized with {len(conversion_progress)} jobs and {len(completed_files)} completed files")
 
 cleaner_thread = threading.Thread(target=job_cleaner)
 cleaner_thread.daemon = True
@@ -703,31 +718,52 @@ def download(job_id):
         Response: File download or error message
     """
     app.logger.info(f"Download requested for job {job_id}")
+    app.logger.debug(f"Job ID {job_id} in conversion_progress: {job_id in conversion_progress}")
+    app.logger.debug(f"Job ID {job_id} in completed_files: {job_id in completed_files}")
     
     if job_id in conversion_progress:
-        if conversion_progress[job_id]['status'] == 'completed':
-            output_path = conversion_progress[job_id]['output_path']
-            if os.path.exists(output_path):
+        job_data = conversion_progress[job_id]
+        app.logger.debug(f"Job data in conversion_progress: {job_data}")
+        
+        if 'status' in job_data:
+            app.logger.debug(f"Job status: {job_data['status']}")
+        
+        if 'output_path' in job_data:
+            output_path = job_data['output_path']
+            app.logger.debug(f"Output path from conversion_progress: {output_path}")
+            app.logger.debug(f"File exists: {os.path.exists(output_path)}")
+            
+            if job_data.get('status') == 'completed' and os.path.exists(output_path):
                 app.logger.info(f"Sending file {output_path} for job {job_id} (from conversion_progress)")
                 try:
-                    if 'author' in conversion_progress[job_id] and 'title' in conversion_progress[job_id]:
-                        author = conversion_progress[job_id]['author']
-                        title = conversion_progress[job_id]['title']
+                    if 'author' in job_data and 'title' in job_data:
+                        author = job_data['author']
+                        title = job_data['title']
                         filename = f"{author}-{title}.pdf"
                     else:
                         filename = f"converted_{job_id[:8]}.pdf"
+                    
+                    completed_files[job_id] = {
+                        'path': output_path,
+                        'author': job_data.get('author', 'unknown'),
+                        'title': job_data.get('title', 'ebook')
+                    }
+                    save_completed_files()
                         
                     response = send_file(output_path, as_attachment=True, download_name=filename)
                     response.headers['Cache-Control'] = 'public, max-age=86400'
                     response.headers['ETag'] = hashlib.md5(str(os.path.getmtime(output_path)).encode()).hexdigest()
                     return response
                 except Exception as e:
-                    app.logger.error(f"Error sending file: {str(e)}")
-                    return f"Error sending file: {str(e)}", 500
+                    app.logger.error(f"Error sending file from conversion_progress: {str(e)}")
     
     if job_id in completed_files:
         file_info = completed_files[job_id]
+        app.logger.debug(f"File info in completed_files: {file_info}")
+        
         output_path = file_info['path'] if isinstance(file_info, dict) else file_info
+        app.logger.debug(f"Output path from completed_files: {output_path}")
+        app.logger.debug(f"File exists: {os.path.exists(output_path)}")
         
         if os.path.exists(output_path):
             app.logger.info(f"Sending file {output_path} for job {job_id} (from completed_files)")
@@ -744,35 +780,7 @@ def download(job_id):
                 response.headers['ETag'] = hashlib.md5(str(os.path.getmtime(output_path)).encode()).hexdigest()
                 return response
             except Exception as e:
-                app.logger.error(f"Error sending file: {str(e)}")
-                return f"Error sending file: {str(e)}", 500
-    
-    try:
-        app.logger.info("Searching for recent PDF files as fallback")
-        newest_pdf = None
-        newest_time = 0
-        
-        for file in os.listdir(TEMP_DIR):
-            if file.endswith('.pdf'):
-                pdf_path = os.path.join(TEMP_DIR, file)
-                mtime = os.path.getmtime(pdf_path)
-                
-                if time.time() - mtime < 300 and mtime > newest_time:
-                    newest_time = mtime
-                    newest_pdf = pdf_path
-        
-        if newest_pdf:
-            app.logger.info(f"Found recent PDF file as fallback: {newest_pdf}")
-            
-            completed_files[job_id] = {'path': newest_pdf}
-            save_completed_files()
-            
-            response = send_file(newest_pdf, as_attachment=True, download_name=f"converted_{job_id[:8]}.pdf")
-            response.headers['Cache-Control'] = 'public, max-age=86400'
-            response.headers['ETag'] = hashlib.md5(str(os.path.getmtime(newest_pdf)).encode()).hexdigest()
-            return response
-    except Exception as e:
-        app.logger.error(f"Error in fallback search: {str(e)}")
+                app.logger.error(f"Error sending file from completed_files: {str(e)}")
     
     app.logger.error("All download attempts failed")
     return "File not found or job expired", 404
@@ -1042,10 +1050,54 @@ def api_job_download(job_id):
         Response: File download or error JSON
     """
     app.logger.info(f"API: Download requested for job {job_id}")
-
+    app.logger.debug(f"API: Job ID {job_id} in conversion_progress: {job_id in conversion_progress}")
+    app.logger.debug(f"API: Job ID {job_id} in completed_files: {job_id in completed_files}")
+    
+    if job_id in conversion_progress:
+        job_data = conversion_progress[job_id]
+        app.logger.debug(f"API: Job data in conversion_progress: {job_data}")
+        
+        if 'status' in job_data:
+            app.logger.debug(f"API: Job status: {job_data['status']}")
+        
+        if 'output_path' in job_data:
+            output_path = job_data['output_path']
+            app.logger.debug(f"API: Output path from conversion_progress: {output_path}")
+            app.logger.debug(f"API: File exists: {os.path.exists(output_path)}")
+            
+            if job_data.get('status') == 'completed' and os.path.exists(output_path):
+                app.logger.info(f"API: Sending file {output_path} for job {job_id} (from conversion_progress)")
+                try:
+                    if 'author' in job_data and 'title' in job_data:
+                        author = job_data['author']
+                        title = job_data['title']
+                        filename = f"{author}-{title}.pdf"
+                    else:
+                        filename = f"converted_{job_id[:8]}.pdf"
+                    
+                    completed_files[job_id] = {
+                        'path': output_path,
+                        'author': job_data.get('author', 'unknown'),
+                        'title': job_data.get('title', 'ebook')
+                    }
+                    save_completed_files()
+                                        
+                    response = send_file(output_path, as_attachment=True, 
+                                    download_name=filename,
+                                    mimetype="application/pdf")
+                    response.headers['Cache-Control'] = 'public, max-age=86400'
+                    response.headers['ETag'] = hashlib.md5(str(os.path.getmtime(output_path)).encode()).hexdigest()
+                    return response
+                except Exception as e:
+                    app.logger.error(f"API: Error sending file from conversion_progress: {str(e)}")
+    
     if job_id in completed_files:
         file_info = completed_files[job_id]
+        app.logger.debug(f"API: File info in completed_files: {file_info}")
+        
         output_path = file_info['path'] if isinstance(file_info, dict) else file_info
+        app.logger.debug(f"API: Output path from completed_files: {output_path}")
+        app.logger.debug(f"API: File exists: {os.path.exists(output_path)}")
         
         if os.path.exists(output_path):
             app.logger.info(f"API: Sending file {output_path} for job {job_id} (from completed_files)")
@@ -1064,9 +1116,10 @@ def api_job_download(job_id):
                 response.headers['ETag'] = hashlib.md5(str(os.path.getmtime(output_path)).encode()).hexdigest()
                 return response
             except Exception as e:
-                app.logger.error(f"API: Error sending file: {str(e)}")
-                return jsonify({"error": f"Error sending file: {str(e)}"}), 500
-    
+                app.logger.error(f"API: Error sending file from completed_files: {str(e)}")
+        else:
+            app.logger.warning(f"API: File {output_path} from completed_files doesn't exist for job {job_id}")
+
     return jsonify({"error": "File not found or job expired"}), 404
 
 if __name__ == "__main__":
