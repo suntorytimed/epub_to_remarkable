@@ -229,8 +229,7 @@ const i18n = {
         document.querySelectorAll('[data-i18n]').forEach(element => {
             const key = element.getAttribute('data-i18n');
             if (translations[lang] && translations[lang][key]) {
-		        let text = translations[lang][key];
-
+		            let text = translations[lang][key];
                 text = this.replacePlaceholders(text);
                 if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
                     if (element.type !== 'checkbox' && element.type !== 'radio') {
