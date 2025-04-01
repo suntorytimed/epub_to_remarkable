@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal Disclaimer - eBook to PDF Converter</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .disclaimer-section {
+            margin-bottom: 30px;
+        }
+        .back-link {
+            margin-top: 30px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="language-switcher">
+        <button class="language-btn active" data-lang="de">DE</button>
+        <button class="language-btn" data-lang="en">EN</button>
+    </div>
+
+    <h1 data-i18n="title">Rechtliche Hinweise</h1>
+    <span class="accent-line"></span>
+    
+    <div class="section">
+        <div class="disclaimer-section">
+            <h2 data-i18n="dataStorageTitle">Datenspeicherung</h2>
+            <p data-i18n="dataStorageText">Alle hochgeladenen Dateien werden nur temporär für den Konvertierungsprozess gespeichert. Nach erfolgreicher Konvertierung bleiben die Dateien für einen begrenzten Zeitraum (maximal {{ timeout_minutes }} Minuten) verfügbar, um den Download zu ermöglichen. Danach werden sie automatisch gelöscht. Wir speichern keine Benutzer- oder Dateimetadaten über diesen Zeitraum hinaus.</p>
+        </div>
+
+        <div class="disclaimer-section">
+            <h2 data-i18n="contentResponsibilityTitle">Inhaltsverantwortung</h2>
+            <p data-i18n="contentResponsibilityText">Benutzer sind allein verantwortlich für die Inhalte der hochgeladenen Dateien. Das Hochladen oder Konvertieren von urheberrechtlich geschütztem Material ohne entsprechende Rechte, sowie von illegalen, beleidigenden oder anderweitig rechtswidrigen Inhalten ist strengstens untersagt. Der Betreiber dieses Dienstes behält sich das Recht vor, verdächtige Aktivitäten zu untersuchen und bei Bedarf an die zuständigen Behörden zu melden.</p>
+        </div>
+
+        <div class="disclaimer-section">
+            <h2 data-i18n="liabilityTitle">Haftungsausschluss</h2>
+            <p data-i18n="liabilityText">Dieser Dienst wird "wie er ist" und ohne jegliche Garantie bereitgestellt. Der Betreiber übernimmt keine Haftung für Schäden, die durch die Nutzung dieses Dienstes entstehen könnten, einschließlich, aber nicht beschränkt auf Datenverlust, Systemschäden oder andere technische Probleme. Die Nutzung erfolgt auf eigenes Risiko. Der Betreiber garantiert nicht die ununterbrochene oder fehlerfreie Verfügbarkeit des Dienstes.</p>
+        </div>
+
+        <div class="disclaimer-section">
+            <h2 data-i18n="copyrightTitle">Urheberrecht</h2>
+            <p data-i18n="copyrightText">Benutzer dürfen diesen Dienst nur zur Konvertierung von Dateien verwenden, an denen sie die entsprechenden Rechte besitzen. Dies umfasst persönliche Dokumente, Werke unter freien Lizenzen oder Material, für das Sie die ausdrückliche Erlaubnis zur Konvertierung haben. Die Konvertierung urheberrechtlich geschützter Werke ohne entsprechende Genehmigung ist verboten und kann rechtliche Konsequenzen nach sich ziehen.</p>
+        </div>
+
+        <div class="disclaimer-section">
+            <h2 data-i18n="termsOfUseTitle">Nutzungsbedingungen</h2>
+            <p data-i18n="termsOfUseText">Durch die Nutzung dieses Dienstes erklären Sie sich mit diesen Bedingungen einverstanden. Bei Verstößen gegen diese Bedingungen kann Ihnen die Nutzung des Dienstes untersagt werden. Sie stimmen zu, den Dienst nicht zu missbrauchen, keine automatisierten Massenanfragen zu stellen und keine Maßnahmen zu ergreifen, die die Funktionsfähigkeit des Dienstes beeinträchtigen könnten.</p>
+        </div>
+
+        <a href="/" class="action-btn" data-i18n="backToConverter">Zurück zum Konverter</a>
+    </div>
+
+    <script>
+        const translations = {
+            de: {
+                title: "Rechtliche Hinweise",
+                dataStorageTitle: "Datenspeicherung",
+                dataStorageText: "Alle hochgeladenen Dateien werden nur temporär für den Konvertierungsprozess gespeichert. Nach erfolgreicher Konvertierung bleiben die Dateien für einen begrenzten Zeitraum (maximal {{ timeout_minutes }} Minuten) verfügbar, um den Download zu ermöglichen. Danach werden sie automatisch gelöscht. Wir speichern keine Benutzer- oder Dateimetadaten über diesen Zeitraum hinaus.",
+                contentResponsibilityTitle: "Inhaltsverantwortung",
+                contentResponsibilityText: "Benutzer sind allein verantwortlich für die Inhalte der hochgeladenen Dateien. Das Hochladen oder Konvertieren von urheberrechtlich geschütztem Material ohne entsprechende Rechte, sowie von illegalen, beleidigenden oder anderweitig rechtswidrigen Inhalten ist strengstens untersagt. Der Betreiber dieses Dienstes behält sich das Recht vor, verdächtige Aktivitäten zu untersuchen und bei Bedarf an die zuständigen Behörden zu melden.",
+                liabilityTitle: "Haftungsausschluss",
+                liabilityText: "Dieser Dienst wird \"wie er ist\" und ohne jegliche Garantie bereitgestellt. Der Betreiber übernimmt keine Haftung für Schäden, die durch die Nutzung dieses Dienstes entstehen könnten, einschließlich, aber nicht beschränkt auf Datenverlust, Systemschäden oder andere technische Probleme. Die Nutzung erfolgt auf eigenes Risiko. Der Betreiber garantiert nicht die ununterbrochene oder fehlerfreie Verfügbarkeit des Dienstes.",
+                copyrightTitle: "Urheberrecht",
+                copyrightText: "Benutzer dürfen diesen Dienst nur zur Konvertierung von Dateien verwenden, an denen sie die entsprechenden Rechte besitzen. Dies umfasst persönliche Dokumente, Werke unter freien Lizenzen oder Material, für das Sie die ausdrückliche Erlaubnis zur Konvertierung haben. Die Konvertierung urheberrechtlich geschützter Werke ohne entsprechende Genehmigung ist verboten und kann rechtliche Konsequenzen nach sich ziehen.",
+                termsOfUseTitle: "Nutzungsbedingungen",
+                termsOfUseText: "Durch die Nutzung dieses Dienstes erklären Sie sich mit diesen Bedingungen einverstanden. Bei Verstößen gegen diese Bedingungen kann Ihnen die Nutzung des Dienstes untersagt werden. Sie stimmen zu, den Dienst nicht zu missbrauchen, keine automatisierten Massenanfragen zu stellen und keine Maßnahmen zu ergreifen, die die Funktionsfähigkeit des Dienstes beeinträchtigen könnten.",
+                backToConverter: "Zurück zum Konverter"
+            },
+            en: {
+                title: "Legal Disclaimer",
+                dataStorageTitle: "Data Storage",
+                dataStorageText: "All uploaded files are stored temporarily for the conversion process only. After successful conversion, files remain available for a limited period (maximum {{ timeout_minutes }} minutes) to allow downloading. They are then automatically deleted. We do not store any user or file metadata beyond this period.",
+                contentResponsibilityTitle: "Content Responsibility",
+                contentResponsibilityText: "Users are solely responsible for the content of uploaded files. Uploading or converting copyrighted material without appropriate rights, as well as illegal, offensive, or otherwise unlawful content is strictly prohibited. The operator of this service reserves the right to investigate suspicious activities and report them to the appropriate authorities if necessary.",
+                liabilityTitle: "Disclaimer of Liability",
+                liabilityText: "This service is provided \"as is\" and without any warranty. The operator assumes no liability for damages that may arise from the use of this service, including but not limited to data loss, system damage, or other technical issues. Use is at your own risk. The operator does not guarantee uninterrupted or error-free availability of the service.",
+                copyrightTitle: "Copyright",
+                copyrightText: "Users may only use this service to convert files for which they have the appropriate rights. This includes personal documents, works under free licenses, or material for which you have explicit permission to convert. Converting copyrighted works without appropriate permission is prohibited and may have legal consequences.",
+                termsOfUseTitle: "Terms of Use",
+                termsOfUseText: "By using this service, you agree to these terms. Violations of these terms may result in your being prohibited from using the service. You agree not to abuse the service, not to make automated mass requests, and not to take any actions that could impair the functionality of the service.",
+                backToConverter: "Back to Converter"
+            }
+        };
+        
+        let currentLanguage = 'de';
+        
+        function updateLanguage(lang) {
+            currentLanguage = lang;
+            
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = translations[lang][key];
+                    } else {
+                        element.textContent = translations[lang][key];
+                    }
+                }
+            });
+            
+            document.querySelectorAll('.language-btn').forEach(button => {
+                if (button.getAttribute('data-lang') === lang) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+            
+            localStorage.setItem('preferredLanguage', lang);
+            
+            document.documentElement.lang = lang;
+        }
+        
+        document.querySelectorAll('.language-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                updateLanguage(this.getAttribute('data-lang'));
+            });
+        });
+        
+        const savedLanguage = localStorage.getItem('preferredLanguage');
+        if (savedLanguage) {
+            updateLanguage(savedLanguage);
+        }
+    </script>
+</body>
+</html>

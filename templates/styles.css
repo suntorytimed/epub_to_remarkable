@@ -459,3 +459,19 @@ pre {
         margin-bottom: calc(var(--spacing-unit) * 2);
     }
 }
+
+.disclaimer-notice {
+    margin-top: calc(var(--spacing-unit) * 4);
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+}
+
+.disclaimer-notice a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.disclaimer-notice a:hover {
+    text-decoration: underline;
+}

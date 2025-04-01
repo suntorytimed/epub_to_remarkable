@@ -956,6 +956,19 @@ def api_health():
         }
     })
 
+@app.route("/disclaimer")
+def disclaimer():
+    """
+    Route for the legal disclaimer page.
+    
+    Returns:
+        Response: Rendered disclaimer template with timeout information
+    """
+    app.logger.info("Disclaimer page requested")
+    # Convert JOB_TIMEOUT from seconds to minutes and round up
+    timeout_minutes = (JOB_TIMEOUT + 59) // 60  # Round up to next minute
+    return render_template("disclaimer.html", timeout_minutes=timeout_minutes)
+
 @app.route("/api/v1/device_profiles", methods=["GET"])
 @cache.cached(timeout=300)
 def api_device_profiles():
