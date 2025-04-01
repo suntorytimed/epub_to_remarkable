@@ -36,6 +36,11 @@
             </div>
             <label for="epub_file" data-i18n="selectEpubFile">EPUB-Datei auswählen:</label>
             <input type="file" name="epub_file" id="epub_file" accept=".epub" required>
+            
+            <button type="submit" data-i18n="convertToPDF">Zu PDF konvertieren</button>
+            <div class="disclaimer-notice">
+                <p data-i18n="byUsingService">Durch die Nutzung dieses Dienstes akzeptieren Sie unsere <a href="/disclaimer" data-i18n="legalTerms">rechtlichen Hinweise</a>.</p>
+            </div>
         </div>
 
         <!-- Parameters for user-defined configuration -->
@@ -158,10 +163,6 @@
                 <label for="change_justification" data-i18n="justification">Ausrichtung:</label>
                 <input type="text" name="change_justification" id="change_justification" value="{{ default_params['change_justification'] }}">
             </div>
-            <button type="submit" data-i18n="convertToPDF">Zu PDF konvertieren</button>
-            <div class="disclaimer-notice">
-                <p data-i18n="byUsingService">Durch die Nutzung dieses Dienstes akzeptieren Sie unsere <a href="/disclaimer" data-i18n="legalTerms">rechtlichen Hinweise</a>.</p>
-            </div>
         </div>
     </form>
 
@@ -256,7 +257,7 @@
         function updateLanguage(lang) {
             currentLanguage = lang;
             
-            document.querySelectorAll('[data-i18n]').forEach(element => {
+            document.querySelectorAll('[data-i18n]:not(p[data-i18n="byUsingService"])').forEach(element => {
                 const key = element.getAttribute('data-i18n');
                 if (translations[lang][key]) {
                     if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
@@ -268,6 +269,17 @@
                     } else {
                         element.textContent = translations[lang][key];
                     }
+                }
+            });
+            
+            document.querySelectorAll('p[data-i18n="byUsingService"]').forEach(paragraph => {
+                const linkElement = paragraph.querySelector('a[data-i18n="legalTerms"]');
+                
+                if (linkElement) {
+                    const paragraphText = translations[lang]["byUsingService"];
+                    const linkText = translations[lang]["legalTerms"];
+                    
+                    paragraph.innerHTML = paragraphText + ' <a href="/disclaimer" data-i18n="legalTerms">' + linkText + '</a>.';
                 }
             });
             
