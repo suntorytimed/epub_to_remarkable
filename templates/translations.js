@@ -74,7 +74,6 @@ const translations = {
         attention: "Achtung",
         statusInconsistency: "Die Statusanzeige ist widersprüchlich. Bitte klicken Sie auf \"Verbindung wiederherstellen\", um den tatsächlichen Status zu prüfen.",
         jobNotFoundError: "Der Konvertierungsauftrag wurde nicht gefunden. Dies kann passieren, wenn:\n- Die Seite neu geladen wurde\n- Der Server neu gestartet wurde\n- Der Auftrag bereits abgeschlossen oder abgelaufen ist\n\nBitte versuchen Sie es erneut mit einer neuen Konvertierung.",
-        // System info page translations
         systemDiagnosis: "System-Diagnose",
         systemStatus: "Systemstatus",
         calibre: "Calibre:",
@@ -169,7 +168,6 @@ const translations = {
         attention: "Attention",
         statusInconsistency: "The status display is inconsistent. Please click on \"Reconnect\" to check the actual status.",
         jobNotFoundError: "The conversion job was not found. This can happen if:\n- The page was reloaded\n- The server was restarted\n- The job has already completed or expired\n\nPlease try again with a new conversion.",
-        // System info page translations
         systemDiagnosis: "System Diagnosis",
         systemStatus: "System Status",
         calibre: "Calibre:",
