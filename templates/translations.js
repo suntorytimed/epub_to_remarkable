@@ -234,15 +234,11 @@ const i18n = {
         });
         
         document.querySelectorAll('p[data-i18n="byUsingService"]').forEach(paragraph => {
-            const linkElement = document.querySelector('a[data-i18n="legalTerms"]');
+            const paragraphText = translations[lang]["byUsingService"];
+            const linkText = translations[lang]["legalTerms"];
             
-            if (linkElement) {
-                const paragraphText = translations[lang]["byUsingService"];
-                const linkText = translations[lang]["legalTerms"];
-                
-                paragraph.innerHTML = paragraphText + ' <a href="/disclaimer" data-i18n="legalTerms">' + 
-                                     linkText + '</a>.';
-            }
+            paragraph.innerHTML = paragraphText + ' <a href="/disclaimer">' + 
+                                 linkText + '</a>.';
         });
         
         this.updateLanguageSelector();
